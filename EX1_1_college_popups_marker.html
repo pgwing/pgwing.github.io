@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Layers Control Example</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Leaflet Marker Cluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <!-- Your custom CSS -->
+    <link rel="stylesheet" href="screen.css" />
+</head>
+<body>
+    <div id="map" style="width: 1200px; height: 1000px"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet Marker Cluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster-src.js"></script>
+    <!-- Your data script -->
+    <script type="text/javascript" src="college.js"></script>		
+	
+	<script>
+		
+		var dots = new L.LayerGroup(); 
+	
+	    var mbAttr = 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+                '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+                'Imagery © <a href="https://mapbox.com">Mapbox</a>',
+            mbUrl = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGF0cmlja3dpbmciLCJhIjoiY21sanoyZ2l2MDVjMjNnb25oN2kxbDRhdyJ9.tCZhjcgI374ZxJhZDU0hHA'; 
+
+	    var grayscale   = L.tileLayer(mbUrl, {id: 'mapbox/light-v10', tileSize: 512, zoomOffset: -1, attribution: mbAttr}),
+		    streets  = L.tileLayer(mbUrl, {id: 'mapbox/streets-v11', tileSize: 512, zoomOffset: -1, attribution: mbAttr});
+
+		var baseLayers = {
+			"Grayscale": grayscale,
+			"Streets": streets
+		};
+		
+		var map = L.map('map', {
+			center: [32.89457891 , -117.09709167],
+			zoom: 11,
+			layers: [grayscale]
+		});
+
+		// 'data' variable from 'college.js' contains the college locations as an array of [latitude, longitude]
+		for (var i = 0; i < data.length; i++) {
+			point = data[i];
+			L.marker([point[0], point[1]]).addTo(dots) .bindPopup(point[3]);
+		}				
+		map.addLayer(dots);	
+
+		var overlays = {
+			"Colleges": dots
+		};
+
+		L.control.layers(baseLayers, overlays).addTo(map);
+	</script>
+</body>
+</html>
