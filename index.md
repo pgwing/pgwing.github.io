@@ -9,4 +9,4 @@ Here are a few things I might include later:
   *A way to contact me
 **Stay tuned for updates!**
 
-<iframe width="700" height="600" allow="local-network-access; geolocation" title="Ilkhanate Historical Map" src="https://univredlands.maps.arcgis.com/apps/mapviewer/index.html?configurableview=true&webmap=9adf757c4f5445f28dff77111150b0ff&theme=light&scroll=false&center=50.39512329799275,36.27150923683377&scale=36978595.474472" ></iframe>
+<iframe src="{{ site.baseurl }}/maps/EX1_1_college_popups_marker.html" width="800" height="600" frameborder="0"></iframe>
