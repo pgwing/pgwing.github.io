@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Southern Arizona</title>
+     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+        .container {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .legend {
+            background: white;
+            padding: 8px;
+            line-height: 18px;
+            color: #333;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .legend i {
+            width: 12px;
+            height: 12px;
+            float: left;
+            margin-right: 6px;
+            opacity: 0.8;
+        }
+        .water-icon {
+            width: 12px;
+            height: 12px;
+            background: blue;
+            transform: rotate(45deg);
+            border: 1px solid #002f8a;
+            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+        }
+        .death-icon {
+            width: 10px;
+            height: 10px;
+            background: red;
+            border: 1px solid #8b0000;
+            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>A Map for Managing Water Stations in the Desert of Southern Arizona</h1>
+    </header>
+    
+    <div class="container">
+        <p>Drinking water locations</p>
+    </div>
+    
+    <div id="map"></div>
+
+    <div class="container" style="margin-top: 10px;">
+        <button id="runGeoprocess" style="padding: 8px 12px; cursor: pointer;">Run geoprocess (count + centroid)</button>
+        <div id="geoprocessOutput" style="margin-top: 12px; font-size: 0.95rem; color: #222;"></div>
+    </div>
+
+    <div class="container">
+        <h2>Migrant Deaths Data (2021-2025)</h2>
+        <table id="migrantTable" border="1">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>Sex</th>
+                    <th>Age</th>
+                    <th>Date</th>
+                    <th>Land Status</th>
+                    <th>Corridor</th>
+                    <th>County</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                </tr>
+            </thead>
+            <tbody id="migrantTableBody">
+            </tbody>
+        </table>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <script>
+        var map = L.map('map').setView([32.4, -112.634], 8);
+
+        var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+
+        var terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+            subdomains: 'abc',
+            minZoom: 0,
+            maxZoom: 17
+        });
+
+        var waterLayerGroup = L.layerGroup().addTo(map);
+        var migrantLayerGroup = L.layerGroup().addTo(map);
+        var deathsOutsideLayerGroup = L.layerGroup().addTo(map);
+
+        streetLayer.addTo(map);
+
+        L.control.layers({
+            'Streets': streetLayer,
+            'Terrain': terrainLayer
+        }, {
+            'Water Stations': waterLayerGroup,
+            'Migrant Deaths': migrantLayerGroup,
+            'Deaths Outside 2-mile Buffers': deathsOutsideLayerGroup
+        }).addTo(map);
+
+        // Load county boundaries
+        fetch('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json')
+            .then(response => response.json())
+            .then(data => {
+                const filteredFeatures = data.features.filter(feature => 
+                    feature.properties.STATE === '04' && 
+                    ['Pima', 'Yuma', 'Santa Cruz'].includes(feature.properties.NAME.replace(' County', ''))
+                );
+                const filteredData = {
+                    type: 'FeatureCollection',
+                    features: filteredFeatures
+                };
+                L.geoJson(filteredData, {
+                    style: {
+                        color: 'brown',
+                        weight: 1,
+                        fillOpacity: 0.05
+                    }
+                }).addTo(map);
+            });
+
+        // Define custom marker icons
+        const waterIcon = L.divIcon({
+            className: 'water-icon',
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+        });
+
+        const deathIcon = L.divIcon({
+            className: 'death-icon',
+            iconSize: [10, 10],
+            iconAnchor: [5, 5]
+        });
+
+        const deathOutsideIcon = L.divIcon({
+            className: 'death-icon',
+            iconSize: [10, 10],
+            iconAnchor: [5, 5],
+            html: '<div style="width: 10px; height: 10px; background: black; border: 1px solid #333;"></div>'
+        });
+
+        // track water points for buffer checks
+        const waterPoints = [];
+
+        // Load water stations from CSV
+        fetch('water_stations.csv')
+            .then(response => response.text())
+            .then(text => {
+                const lines = text.trim().split('\n');
+                lines.slice(1).forEach(line => {  // skip header
+                    const [name, lat, lng, type, county] = line.split(',');
+                    const latNum = parseFloat(lat);
+                    const lngNum = parseFloat(lng);
+
+                    waterPoints.push([latNum, lngNum]);
+
+                    L.circleMarker([latNum, lngNum], {
+                        color: 'blue',
+                        radius: 5,
+                        fillOpacity: 0.8
+                    }).addTo(waterLayerGroup)
+                        .bindPopup(`${name}<br>Type: ${type}<br>County: ${county}`);
+
+                    // Add 2-mile buffer around each water station (approx. 3218 meters)
+                    L.circle([latNum, lngNum], {
+                        color: 'blue',
+                        weight: 1,
+                        opacity: 0.6,
+                        fillColor: 'blue',
+                        fillOpacity: 0.08,
+                        radius: 3218
+                    }).addTo(waterLayerGroup);
+                });
+            });
+
+        // Zoom-to-active-data function
+        function zoomToActiveData() {
+            const bounds = L.latLngBounds([]);
+
+            if (map.hasLayer(waterLayerGroup)) {
+                waterLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (map.hasLayer(migrantLayerGroup)) {
+                migrantLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {padding: [20, 20]});
+            } else {
+                alert('No data visible to zoom to. Enable at least one overlay layer.');
+            }
+        }
+
+        // Zoom control button
+        var zoomControl = L.control({position: 'topleft'});
+        zoomControl.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            var link = L.DomUtil.create('a', '', div);
+            link.title = 'Zoom to visible data';
+            link.href = '#';
+            link.innerHTML = '⤢';
+
+            L.DomEvent.on(link, 'click', L.DomEvent.stopPropagation)
+                .on(link, 'click', L.DomEvent.preventDefault)
+                .on(link, 'click', zoomToActiveData);
+
+            return div;
+        };
+        zoomControl.addTo(map);
+
+        // Legend control
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function () {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<strong>Legend</strong><br>' +
+                '<i style="background: blue; border-radius: 50%; width: 12px; height: 12px;"></i> Water Stations<br>' +
+                '<i style="background: red; width: 10px; height: 10px;"></i> Migrant Deaths<br>';
+            return div;
+        };
+        legend.addTo(map);
+
+        function computeLayerStats() {
+            function layerSummary(layerGroup) {
+                const points = [];
+                layerGroup.eachLayer(marker => {
+                    if (marker.getLatLng) {
+                        points.push(marker.getLatLng());
+                    }
+                });
+                if (points.length === 0) {
+                    return { count: 0, centroid: null };
+                }
+                let latSum = 0, lngSum = 0;
+                points.forEach(pt => {
+                    latSum += pt.lat;
+                    lngSum += pt.lng;
+                });
+                return {
+                    count: points.length,
+                    centroid: [latSum / points.length, lngSum / points.length]
+                };
+            }
+
+            const waterStats = layerSummary(waterLayerGroup);
+            const deathStats = layerSummary(migrantLayerGroup);
+
+            const formatPoint = p => p ? `${p[0].toFixed(5)}, ${p[1].toFixed(5)}` : 'N/A';
+
+            document.getElementById('geoprocessOutput').innerHTML =
+                `<strong>Geoprocessing results</strong><br>` +
+                `Water stations: ${waterStats.count} points; centroid ${formatPoint(waterStats.centroid)}<br>` +
+                `Migrant deaths: ${deathStats.count} points; centroid ${formatPoint(deathStats.centroid)}<br>`;
+
+            if (waterStats.centroid) {
+                L.circle([waterStats.centroid[0], waterStats.centroid[1]], {
+                    color: 'blue',
+                    weight: 2,
+                    radius: 2000,
+                    fillOpacity: 0.1
+                }).addTo(map);
+            }
+            if (deathStats.centroid) {
+                L.circle([deathStats.centroid[0], deathStats.centroid[1]], {
+                    color: 'red',
+                    weight: 2,
+                    radius: 2000,
+                    fillOpacity: 0.08
+                }).addTo(map);
+            }
+        }
+
+        document.getElementById('runGeoprocess').addEventListener('click', computeLayerStats);
+
+        // Load migrant deaths from CSV
+        fetch('migrant_deaths_2021-2025.csv')
+            .then(response => response.text())
+            .then(text => {
+                const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                const tableBody = document.getElementById('migrantTableBody');
+                let startIndex = 0;
+                if (lines[0].toLowerCase().startsWith('id,')) {
+                    startIndex = 1;
+                }
+
+                for (let i = startIndex; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    if (values.length < 11) continue; // skip malformed rows
+
+                    const row = tableBody.insertRow();
+                    values.forEach(value => {
+                        const cell = row.insertCell();
+                        cell.textContent = value.trim();
+                    });
+
+                    const lat = parseFloat(values[9]);
+                    const lng = parseFloat(values[10]);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const point = L.latLng(lat, lng);
+
+                        function distToWater() {
+                            let nearest = Infinity;
+                            waterPoints.forEach(wp => {
+                                const d = point.distanceTo(L.latLng(wp[0], wp[1]));
+                                if (d < nearest) nearest = d;
+                            });
+                            return nearest;
+                        }
+
+                        const nearestDistance = distToWater();
+                        if (nearestDistance > 3218) {
+                            L.marker(point, { icon: deathOutsideIcon })
+                                .addTo(deathsOutsideLayerGroup)
+                                    .bindPopup(`Date: ${values[5]}<br>Sex: ${values[3]}<br>Age: ${values[4]}<br>Corridor: ${values[7]}<br>County: ${values[8]}`);
+                        }
+
+                        L.marker(point, { icon: deathIcon })
+                            .addTo(migrantLayerGroup)
+                                .bindPopup(`Date: ${values[5]}<br>Sex: ${values[3]}<br>Age: ${values[4]}<br>Corridor: ${values[7]}<br>County: ${values[8]}`);
+                    }
+                }
+            });
+    </script>
+</body>
+</html>
