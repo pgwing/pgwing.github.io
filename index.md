@@ -5,6 +5,4 @@ My name is Pat Wing, and I am a GIS student learning how to make internet maps.
 
 <iframe src="{{ site.baseurl }}/Project.html" width="800" height="600" frameborder="0"></iframe>
 
-Here is a map of Petco Park in San Diego I have embedded:
 
-<iframe src="{{ site.baseurl }}/maps/EX2_PETCO.html" width="800" height="600" frameborder="0"></iframe>
