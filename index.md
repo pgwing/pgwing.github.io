@@ -1,8 +1,7 @@
-#Welcome to my Web Mapping Portfolio!
-Hi, I'm Pat Wing
-This is a very basic first page for my website, which I will be building as part of the GIS course.
+Hello! Welcome to my web mapping portfolio.
+My name is Pat Wing, and I am a GIS student learning how to make internet maps.
 
-## Main Project
+## This is my main map project
 
 <iframe src="{{ site.baseurl }}/Project.html" width="800" height="600" frameborder="0"></iframe>
 
