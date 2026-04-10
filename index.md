@@ -4,8 +4,8 @@
   body { background-color: #dbeeff; }
 </style>
 
-Hello! Welcome to my web mapping portfolio.
-My name is Pat Wing, and I am a GIS student learning how to make internet maps.
+Aqua Vitae
+Providing Drinking Water in the Southern Arizona Desert
 
 ## This is my main map project
 
