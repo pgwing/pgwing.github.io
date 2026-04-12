@@ -53,24 +53,26 @@
 			letter-spacing: 0.02em;
 		}
 
-		.nav-links {
-			display: flex;
-			gap: 1rem;
-			flex-wrap: wrap;
-		}
-
-		.nav-links a {
-			color: var(--accent);
-			text-decoration: none;
-			font-weight: 600;
-		}
-
 		main {
 			max-width: 1200px;
 			margin: 0 auto;
 			padding: 1.25rem;
 			display: grid;
 			gap: 1.25rem;
+		}
+
+		.about-map-box {
+			max-width: 1200px;
+			margin: 1rem auto 0;
+			padding: 1rem 1.25rem;
+			background: #fff4de;
+			border: 1px solid var(--line);
+			border-left: 6px solid #7d5a3c;
+			border-radius: 10px;
+		}
+
+		.about-map-box h2 {
+			margin: 0 0 0.4rem;
 		}
 
 		section {
@@ -209,29 +211,32 @@
 	<header>
 		<nav>
 			<div class="site-title">Aqua Vitalis: Providing Drinking Water in the Southern Arizona Desert</div>
-			<div class="nav-links">
-				<a href="#map-section">Map</a>
-				<a href="#about-section">Text</a>
-				<a href="#photos-section">Photos</a>
-				<a href="#video-section">Video</a>
-			</div>
 		</nav>
 	</header>
+
+	<section class="about-map-box" aria-label="About this map section">
+		<h2>About this Map</h2>
+		<p>
+			This map has been designed as a tool to help the organization 
+			Humane Borders visualize and optimize the deployment of drinking water stations
+			in the counties of Yuma, Pima, and Santa Cruz in southern Arizona.
+		</p>
+	</section>
 
 	<main>
 		<section class="hero">
 			<h1>Interactive Map</h1>
 			<p>
-				Use this template to combine geographic data, explanatory text, imagery,
-				and video in one place.
+				Use the layer feature to toggle on and off locations of water stations and 
+				deaths of individuals over the past five years. You can also enable the distance tool to
+				see how far each death occurred from a water station.
 			</p>
 		</section>
 
 		<section class="map-panel" id="map-section">
 			<div id="map" aria-label="Map display area"></div>
 			<div class="map-caption">
-				Interactive Southern Arizona map loaded from the project configuration,
-				including AGOL layers, legend, and layer controls.
+				Map design and layers created using Leaflet and ArcGIS Online.
 			</div>
 		</section>
 
