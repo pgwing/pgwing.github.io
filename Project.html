@@ -16,6 +16,7 @@
         }
         body {
             font-family: Arial, sans-serif;
+            background-color: #d2b48c;
         }
         header {
             background-color: #333;
@@ -24,8 +25,8 @@
             text-align: center;
         }
         #map {
-            height: 500px;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
         }
         .container {
             padding: 20px;
@@ -73,6 +74,17 @@
             border: 1px solid #8b0000;
             box-shadow: 0 0 2px rgba(0,0,0,0.3);
         }
+        .measure-button {
+            background: #9ed8ff;
+            color: #0b2a44;
+            border: 1px solid #69bff5;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+        .measure-button:hover {
+            background: #88cefb;
+        }
     </style>
 </head>
 <body>
@@ -89,6 +101,13 @@
     <div class="container" style="margin-top: 10px;">
         <button id="runGeoprocess" style="padding: 8px 12px; cursor: pointer;">Run geoprocess (count + centroid)</button>
         <div id="geoprocessOutput" style="margin-top: 12px; font-size: 0.95rem; color: #222;"></div>
+        <label for="routeProfile" style="display: inline-block; margin-top: 10px; margin-right: 8px;">Route mode:</label>
+        <select id="routeProfile" style="padding: 6px 8px;">
+            <option value="driving">Driving</option>
+            <option value="walking">Walking</option>
+        </select>
+        <button id="toggleMeasure" class="measure-button" style="margin-top: 10px; padding: 8px 12px; cursor: pointer;">Enable nearest-water measure</button>
+        <div id="measureOutput" style="margin-top: 10px; font-size: 0.95rem; color: #222;">Nearest-water measure is off.</div>
     </div>
 
     <div class="container">
@@ -116,8 +135,15 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
     <script>
-        var map = L.map('map').setView([32.4, -112.634], 8);
+        var map = L.map('map', {
+            zoomSnap: 0.5
+        }).setView([31.8800834, -111.2059306], 8.5);
+        map.createPane('waterStationsPane');
+        map.getPane('waterStationsPane').style.zIndex = 700;
 
         var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -130,9 +156,257 @@
             maxZoom: 17
         });
 
-        var waterLayerGroup = L.layerGroup().addTo(map);
+        var waterStationsLayerGroup = L.layerGroup().addTo(map);
         var migrantLayerGroup = L.layerGroup().addTo(map);
         var deathsOutsideLayerGroup = L.layerGroup().addTo(map);
+        var deathsInReservationLayerGroup = L.layerGroup().addTo(map);
+        var deaths10MilesFromWaterLayerGroup = L.layerGroup().addTo(map);
+        var deathsHeatLayerGroup = L.layerGroup().addTo(map);
+        var deathsInReservationHeatLayerGroup = L.layerGroup().addTo(map);
+        var distanceMeasureLayerGroup = L.layerGroup().addTo(map);
+
+        var waterStationPoints = [];
+        var outsideReservationDeathFeatures = [];
+        var measurementEnabled = false;
+        var currentMeasureRequestId = 0;
+        const ALLOWED_DEATH_COUNTIES = new Set(['yuma', 'pima', 'santa cruz']);
+
+        // If your AGOL layers are private, paste a valid token string here.
+        // Leave empty for public services.
+        const AGOL_TOKEN = '';
+
+        function getPointCoordinates(feature) {
+            const geom = feature && feature.geometry ? feature.geometry : {};
+            const coords = geom.coordinates || [];
+            if (!Array.isArray(coords) || coords.length < 2) return null;
+            return [coords[0], coords[1]]; // [lon, lat]
+        }
+
+        function textContainsTohonoOodham(value) {
+            if (typeof value !== 'string') return false;
+            const normalized = value.toLowerCase();
+            return normalized.includes('tohono') || normalized.includes('oodham') || normalized.includes("o'odham") || normalized.includes('o odham');
+        }
+
+        function isTohonoOodhamReservation(feature) {
+            if (!feature || !feature.properties) return false;
+            return Object.values(feature.properties).some(textContainsTohonoOodham);
+        }
+
+        function getFeatureCounty(feature) {
+            const props = feature && (feature.properties || feature.attributes) ? (feature.properties || feature.attributes) : {};
+            const county = props.COUNTY || props.County || props.county || '';
+            return String(county).trim().toLowerCase();
+        }
+
+        function isAllowedDeathCounty(feature) {
+            return ALLOWED_DEATH_COUNTIES.has(getFeatureCounty(feature));
+        }
+
+        function isPointInsideAnyReservation(lon, lat, reservationFeatures) {
+            if (typeof turf === 'undefined' || !Array.isArray(reservationFeatures) || reservationFeatures.length === 0) {
+                return false;
+            }
+
+            const pt = turf.point([lon, lat]);
+            for (const polyFeature of reservationFeatures) {
+                try {
+                    if (turf.booleanPointInPolygon(pt, polyFeature)) return true;
+                } catch (_err) {
+                    // Skip malformed geometries and continue checking others.
+                }
+            }
+            return false;
+        }
+
+        function findNearestWaterStation(deathLatLng) {
+            if (!deathLatLng || waterStationPoints.length === 0) return null;
+
+            let nearest = null;
+            let nearestMeters = Infinity;
+            waterStationPoints.forEach(station => {
+                const meters = map.distance(deathLatLng, station.latlng);
+                if (meters < nearestMeters) {
+                    nearestMeters = meters;
+                    nearest = station;
+                }
+            });
+
+            if (!nearest) return null;
+            return { station: nearest, meters: nearestMeters };
+        }
+
+        function refresh10MilesFromWaterLayer() {
+            deaths10MilesFromWaterLayerGroup.clearLayers();
+
+            if (!Array.isArray(outsideReservationDeathFeatures) || outsideReservationDeathFeatures.length === 0) return;
+            if (!Array.isArray(waterStationPoints) || waterStationPoints.length === 0) return;
+
+            const thresholdMeters = 10 * 1609.344;
+            outsideReservationDeathFeatures.forEach(feature => {
+                const props = feature.properties || feature.attributes || {};
+                const coords = getPointCoordinates(feature);
+                if (!coords) return;
+
+                const deathLatLng = L.latLng(coords[1], coords[0]);
+                const nearest = findNearestWaterStation(deathLatLng);
+                if (!nearest || nearest.meters <= thresholdMeters) return;
+
+                const miles = nearest.meters / 1609.344;
+                const marker = L.circleMarker(deathLatLng, {
+                    radius: 4,
+                    color: '#c2578a',
+                    weight: 1,
+                    fillColor: '#e07cab',
+                    fillOpacity: 0.95
+                });
+
+                marker.bindPopup(
+                    `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                    `Age: ${props.AGE || props.Age || props.age || 'N/A'}<br>` +
+                    `Nearest water distance: ${miles.toFixed(2)} miles`
+                );
+                marker.on('click', function () {
+                    if (measurementEnabled) {
+                        measureToNearestWater(marker.getLatLng());
+                    }
+                });
+
+                marker.addTo(deaths10MilesFromWaterLayerGroup);
+            });
+        }
+
+        function getRouteProfile() {
+            const select = document.getElementById('routeProfileMap') || document.getElementById('routeProfile');
+            const value = select ? select.value : 'driving';
+            return value === 'walking' ? 'walking' : 'driving';
+        }
+
+        function formatRouteMode(profile) {
+            return profile === 'walking' ? 'Walking' : 'Driving';
+        }
+
+        async function fetchRouteMetrics(startLatLng, endLatLng, profile) {
+            const start = `${startLatLng.lng},${startLatLng.lat}`;
+            const end = `${endLatLng.lng},${endLatLng.lat}`;
+            const url = `https://router.project-osrm.org/route/v1/${profile}/${start};${end}?overview=full&geometries=geojson`;
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Routing request failed');
+
+            const data = await response.json();
+            const route = data && Array.isArray(data.routes) ? data.routes[0] : null;
+            if (!route || !route.geometry || !Array.isArray(route.geometry.coordinates)) {
+                throw new Error('No route returned');
+            }
+
+            return {
+                meters: Number(route.distance),
+                coordinates: route.geometry.coordinates
+            };
+        }
+
+        async function measureToNearestWater(deathLatLng) {
+            const requestId = ++currentMeasureRequestId;
+            const result = findNearestWaterStation(deathLatLng);
+            const output = document.getElementById('measureOutput');
+            const outputMap = document.getElementById('measureOutputMap');
+            const profile = getRouteProfile();
+            const modeLabel = formatRouteMode(profile);
+
+            distanceMeasureLayerGroup.clearLayers();
+
+            if (!result) {
+                if (output) output.textContent = 'No water stations available for distance measurement yet.';
+                if (outputMap) outputMap.textContent = 'No water stations available for distance measurement yet.';
+                return;
+            }
+
+            if (output) output.textContent = `Calculating ${modeLabel.toLowerCase()} route...`;
+            if (outputMap) outputMap.textContent = `Calculating ${modeLabel.toLowerCase()} route...`;
+
+            let meters = result.meters;
+            let usedRoute = false;
+            let routeLatLngs = [deathLatLng, result.station.latlng];
+
+            try {
+                const routeResult = await fetchRouteMetrics(deathLatLng, result.station.latlng, profile);
+                if (requestId !== currentMeasureRequestId) return;
+
+                if (Number.isFinite(routeResult.meters)) {
+                    meters = routeResult.meters;
+                }
+
+                routeLatLngs = routeResult.coordinates.map(coord => L.latLng(coord[1], coord[0]));
+                usedRoute = routeLatLngs.length > 1;
+            } catch (_err) {
+                // Keep straight-line fallback if routing is unavailable.
+            }
+
+            if (requestId !== currentMeasureRequestId) return;
+
+            const miles = meters / 1609.344;
+
+            const line = L.polyline(routeLatLngs, {
+                color: '#1f5fa8',
+                weight: 3,
+                opacity: 0.9,
+                dashArray: usedRoute ? null : '8, 6'
+            }).addTo(distanceMeasureLayerGroup);
+
+            L.circleMarker(deathLatLng, {
+                radius: 6,
+                color: '#5a0000',
+                weight: 2,
+                fillColor: '#5a0000',
+                fillOpacity: 1
+            }).addTo(distanceMeasureLayerGroup);
+
+            L.circleMarker(result.station.latlng, {
+                radius: 7,
+                color: '#0057d9',
+                weight: 2,
+                fillColor: '#1e88ff',
+                fillOpacity: 1
+            }).addTo(distanceMeasureLayerGroup);
+
+            line.bindPopup(
+                `Closest station: ${result.station.name}<br>` +
+                `Mode: ${modeLabel}${usedRoute ? '' : ' (straight-line fallback)'}<br>` +
+                `Distance: ${miles.toFixed(2)} miles (${meters.toFixed(0)} m)`
+            ).openPopup();
+
+            const resultHtml =
+                `<strong>Nearest-water distance</strong><br>` +
+                `Closest station: ${result.station.name}<br>` +
+                `Mode: ${modeLabel}${usedRoute ? '' : ' (straight-line fallback)'}<br>` +
+                `Distance: ${miles.toFixed(2)} miles (${meters.toFixed(0)} m)`;
+
+            if (output) output.innerHTML = resultHtml;
+            if (outputMap) outputMap.innerHTML = resultHtml;
+        }
+
+        function setMeasurementEnabled(enabled) {
+            measurementEnabled = enabled;
+
+            const btn = document.getElementById('toggleMeasure');
+            const output = document.getElementById('measureOutput');
+            const btnMap = document.getElementById('toggleMeasureMap');
+            const outputMap = document.getElementById('measureOutputMap');
+
+            if (enabled) {
+                if (btn) btn.textContent = 'Disable nearest-water measure';
+                if (btnMap) btnMap.textContent = 'Disable nearest-water measure';
+                if (output) output.textContent = `Measurement is on (${formatRouteMode(getRouteProfile())}). Click any death point to measure to the nearest water station.`;
+                if (outputMap) outputMap.textContent = `Measurement is on (${formatRouteMode(getRouteProfile())}). Click any death point to measure to the nearest water station.`;
+            } else {
+                if (btn) btn.textContent = 'Enable nearest-water measure';
+                if (btnMap) btnMap.textContent = 'Enable nearest-water measure';
+                if (output) output.textContent = 'Nearest-water measure is off.';
+                if (outputMap) outputMap.textContent = 'Nearest-water measure is off.';
+                distanceMeasureLayerGroup.clearLayers();
+            }
+        }
 
         streetLayer.addTo(map);
 
@@ -140,98 +414,364 @@
             'Streets': streetLayer,
             'Terrain': terrainLayer
         }, {
-            'Water Stations': waterLayerGroup,
+            'Water Stations': waterStationsLayerGroup,
             'Migrant Deaths': migrantLayerGroup,
-            'Deaths Outside 2-mile Buffers': deathsOutsideLayerGroup
+            'Migrant Deaths Outside Buffer': deathsOutsideLayerGroup,
+            'Deaths in Reservation Territory': deathsInReservationLayerGroup,
+            'Deaths > 10 Miles from Water': deaths10MilesFromWaterLayerGroup,
+            'Heat Map of Deaths': deathsHeatLayerGroup,
+            'Heat Map of Reservation Deaths': deathsInReservationHeatLayerGroup
         }).addTo(map);
 
-        // Load county boundaries
-        fetch('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json')
-            .then(response => response.json())
-            .then(data => {
-                const filteredFeatures = data.features.filter(feature => 
-                    feature.properties.STATE === '04' && 
-                    ['Pima', 'Yuma', 'Santa Cruz'].includes(feature.properties.NAME.replace(' County', ''))
-                );
-                const filteredData = {
-                    type: 'FeatureCollection',
-                    features: filteredFeatures
-                };
-                L.geoJson(filteredData, {
-                    style: {
-                        color: 'brown',
-                        weight: 1,
-                        fillOpacity: 0.05
-                    }
-                }).addTo(map);
+        async function resolveFeatureLayerUrl(serviceUrl) {
+            if (/\/FeatureServer\/\d+$/.test(serviceUrl)) {
+                return serviceUrl;
+            }
+
+            try {
+                const response = await fetch(serviceUrl + '?f=pjson');
+                const info = await response.json();
+                if (info && Array.isArray(info.layers) && info.layers.length > 0) {
+                    return serviceUrl + '/' + info.layers[0].id;
+                }
+            } catch (err) {
+                console.warn('Could not resolve layer id for service:', serviceUrl, err);
+            }
+
+            return serviceUrl + '/0';
+        }
+
+        async function initAgolLayers() {
+            const waterBufferLayerUrl = await resolveFeatureLayerUrl('https://services.arcgis.com/o6oETlrWetREI1A2/arcgis/rest/services/water_3_mile_buffer/FeatureServer');
+            const migrantDeathsLayerUrl = await resolveFeatureLayerUrl('https://services.arcgis.com/o6oETlrWetREI1A2/arcgis/rest/services/migrant_deaths_2021_2025/FeatureServer');
+            const deathsOutsideLayerUrl = await resolveFeatureLayerUrl('https://services.arcgis.com/o6oETlrWetREI1A2/arcgis/rest/services/deaths_outside_buffers/FeatureServer');
+            const reservationsLayerUrl = await resolveFeatureLayerUrl('https://services.arcgis.com/o6oETlrWetREI1A2/arcgis/rest/services/American_Indian_Reservations_in_Arizona/FeatureServer');
+
+            // Force uniform death symbols: small dark-red circles.
+            const deathPointToLayer = function (_geojson, latlng) {
+                return L.circleMarker(latlng, {
+                    radius: 4,
+                    color: '#5a0000',
+                    weight: 1,
+                    fillColor: '#5a0000',
+                    fillOpacity: 0.95
+                });
+            };
+
+            const reservationDeathPointToLayer = function (_geojson, latlng) {
+                return L.circleMarker(latlng, {
+                    radius: 4,
+                    color: '#5a0000',
+                    weight: 1,
+                    fillColor: '#5a0000',
+                    fillOpacity: 0.95
+                });
+            };
+
+            // Draw water station points as blue circles using each water feature's station coordinates.
+            const waterStationsQueryLayer = L.esri.featureLayer({
+                url: waterBufferLayerUrl,
+                token: AGOL_TOKEN || undefined
             });
 
-        // Define custom marker icons
-        const waterIcon = L.divIcon({
-            className: 'water-icon',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
-        });
+            waterStationsQueryLayer.query().where('1=1').run(function (error, featureCollection) {
+                if (error) {
+                    console.error('Failed to load water station features:', error);
+                    return;
+                }
 
-        const deathIcon = L.divIcon({
-            className: 'death-icon',
-            iconSize: [10, 10],
-            iconAnchor: [5, 5]
-        });
+                const features = (featureCollection && featureCollection.features) ? featureCollection.features : [];
+                waterStationPoints = [];
+                features.forEach(feature => {
+                    const props = feature.properties || feature.attributes || {};
+                    const coords = getPointCoordinates(feature);
 
-        const deathOutsideIcon = L.divIcon({
-            className: 'death-icon',
-            iconSize: [10, 10],
-            iconAnchor: [5, 5],
-            html: '<div style="width: 10px; height: 10px; background: black; border: 1px solid #333;"></div>'
-        });
+                    let latlng = null;
+                    if (coords) {
+                        latlng = L.latLng(coords[1], coords[0]);
+                    } else {
+                        try {
+                            const bounds = L.geoJSON(feature).getBounds();
+                            if (bounds.isValid()) {
+                                latlng = bounds.getCenter();
+                            }
+                        } catch (_err) {
+                            // Skip malformed geometries.
+                        }
+                    }
 
-        // track water points for buffer checks
-        const waterPoints = [];
+                    const latitude = Number(props.latitude);
+                    const longitude = Number(props.longitude);
+                    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+                        latlng = L.latLng(latitude, longitude);
+                    }
 
-        // Load water stations from CSV
-        fetch('water_stations.csv')
-            .then(response => response.text())
-            .then(text => {
-                const lines = text.trim().split('\n');
-                lines.slice(1).forEach(line => {  // skip header
-                    const [name, lat, lng, type, county] = line.split(',');
-                    const latNum = parseFloat(lat);
-                    const lngNum = parseFloat(lng);
+                    if (!latlng) return;
 
-                    waterPoints.push([latNum, lngNum]);
+                    const stationName = (props.name === null || props.name === undefined || String(props.name).trim() === '')
+                        ? 'No station name available'
+                        : String(props.name);
 
-                    L.circleMarker([latNum, lngNum], {
-                        color: 'blue',
+                    const stationMarker = L.circleMarker(latlng, {
+                        pane: 'waterStationsPane',
                         radius: 5,
-                        fillOpacity: 0.8
-                    }).addTo(waterLayerGroup)
-                        .bindPopup(`${name}<br>Type: ${type}<br>County: ${county}`);
-
-                    // Add 2-mile buffer around each water station (approx. 3218 meters)
-                    L.circle([latNum, lngNum], {
-                        color: 'blue',
+                        color: '#0057d9',
                         weight: 1,
-                        opacity: 0.6,
-                        fillColor: 'blue',
-                        fillOpacity: 0.08,
-                        radius: 3218
-                    }).addTo(waterLayerGroup);
+                        fillColor: '#1e88ff',
+                        fillOpacity: 0.95
+                    }).bindPopup(`${stationName}`);
+
+                    stationMarker.on('click', function (e) {
+                        if (e && e.originalEvent) {
+                            L.DomEvent.stopPropagation(e.originalEvent);
+                        }
+                        stationMarker.openPopup();
+                    });
+
+                    stationMarker.addTo(waterStationsLayerGroup);
+                    stationMarker.bringToFront();
+
+                    waterStationPoints.push({
+                        latlng: stationMarker.getLatLng(),
+                        name: stationName
+                    });
+                });
+
+                refresh10MilesFromWaterLayer();
+            });
+
+            const reservationsQueryLayer = L.esri.featureLayer({
+                url: reservationsLayerUrl,
+                token: AGOL_TOKEN || undefined
+            });
+
+            const tohonoReservationFeatures = await new Promise(resolve => {
+                reservationsQueryLayer.query().where('1=1').run(function (error, featureCollection) {
+                    if (error) {
+                        console.error('Failed to load reservation features for death filtering:', error);
+                        resolve([]);
+                        return;
+                    }
+                    const features = (featureCollection && featureCollection.features) ? featureCollection.features : [];
+                    resolve(features.filter(isTohonoOodhamReservation));
                 });
             });
+
+            // Query migrant deaths and render only those outside Tohono O'odham reservation land.
+            const migrantDeathsQueryLayer = L.esri.featureLayer({
+                url: migrantDeathsLayerUrl,
+                token: AGOL_TOKEN || undefined
+            });
+
+            migrantDeathsQueryLayer.query().where('1=1').run(function (error, featureCollection) {
+                if (error) {
+                    console.error('Failed to load migrant deaths table from AGOL:', error);
+                    return;
+                }
+
+                const allFeatures = (featureCollection && featureCollection.features) ? featureCollection.features : [];
+                const countyFilteredFeatures = allFeatures.filter(isAllowedDeathCounty);
+                const filteredFeatures = countyFilteredFeatures.filter(feature => {
+                    const coords = getPointCoordinates(feature);
+                    if (!coords) return false;
+                    return !isPointInsideAnyReservation(coords[0], coords[1], tohonoReservationFeatures);
+                });
+                const inReservationFeatures = countyFilteredFeatures.filter(feature => {
+                    const coords = getPointCoordinates(feature);
+                    if (!coords) return false;
+                    return isPointInsideAnyReservation(coords[0], coords[1], tohonoReservationFeatures);
+                });
+
+                outsideReservationDeathFeatures = filteredFeatures;
+                refresh10MilesFromWaterLayer();
+
+                migrantLayerGroup.clearLayers();
+                filteredFeatures.forEach(feature => {
+                    const props = feature.properties || {};
+                    const coords = getPointCoordinates(feature);
+                    if (!coords) return;
+
+                    const marker = deathPointToLayer(feature, L.latLng(coords[1], coords[0]));
+                    marker.bindPopup(
+                        `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                        `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                    );
+                    marker.on('click', function () {
+                        if (measurementEnabled) {
+                            measureToNearestWater(marker.getLatLng());
+                        }
+                    });
+                    marker.addTo(migrantLayerGroup);
+                });
+
+                deathsInReservationLayerGroup.clearLayers();
+                inReservationFeatures.forEach(feature => {
+                    const props = feature.properties || {};
+                    const coords = getPointCoordinates(feature);
+                    if (!coords) return;
+
+                    const marker = reservationDeathPointToLayer(feature, L.latLng(coords[1], coords[0]));
+                    marker.bindPopup(
+                        `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                        `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                    );
+                    marker.on('click', function () {
+                        if (measurementEnabled) {
+                            measureToNearestWater(marker.getLatLng());
+                        }
+                    });
+                    marker.addTo(deathsInReservationLayerGroup);
+                });
+
+                if (typeof L.heatLayer === 'function') {
+                    const heatPoints = filteredFeatures
+                        .map(feature => {
+                            const coords = getPointCoordinates(feature);
+                            if (!coords) return null;
+                            return [coords[1], coords[0], 0.8];
+                        })
+                        .filter(Boolean);
+
+                    const deathsHeatLayer = L.heatLayer(heatPoints, {
+                        radius: 20,
+                        blur: 15,
+                        maxZoom: 11,
+                        minOpacity: 0.35,
+                        gradient: {
+                            0.2: '#5a0000',
+                            0.5: '#8b0000',
+                            0.8: '#b22222',
+                            1.0: '#ff4d4d'
+                        }
+                    });
+
+                    deathsHeatLayerGroup.clearLayers();
+                    deathsHeatLayerGroup.addLayer(deathsHeatLayer);
+
+                    const reservationHeatPoints = inReservationFeatures
+                        .map(feature => {
+                            const coords = getPointCoordinates(feature);
+                            if (!coords) return null;
+                            return [coords[1], coords[0], 0.8];
+                        })
+                        .filter(Boolean);
+
+                    const reservationDeathsHeatLayer = L.heatLayer(reservationHeatPoints, {
+                        radius: 20,
+                        blur: 15,
+                        maxZoom: 11,
+                        minOpacity: 0.35,
+                        gradient: {
+                            0.2: '#5a0000',
+                            0.5: '#8b0000',
+                            0.8: '#b22222',
+                            1.0: '#ff4d4d'
+                        }
+                    });
+
+                    deathsInReservationHeatLayerGroup.clearLayers();
+                    deathsInReservationHeatLayerGroup.addLayer(reservationDeathsHeatLayer);
+                }
+
+                const tableBody = document.getElementById('migrantTableBody');
+                tableBody.innerHTML = '';
+
+                filteredFeatures.forEach(feature => {
+                    const props = feature.properties || {};
+                    const coords = getPointCoordinates(feature) || ['', ''];
+
+                    const rowValues = [
+                        props.ID || props.Id || props.id || '',
+                        props.LAST_NAME || props.LASTNAME || props.LastName || props.LAST || '',
+                        props.FIRST_NAME || props.FIRSTNAME || props.FirstName || props.FIRST || '',
+                        props.SEX || props.Sex || props.sex || '',
+                        props.AGE || props.Age || props.age || '',
+                        props.DATE || props.Date || props.date || '',
+                        props.LAND_STATUS || props.LANDSTATUS || props.LandStatus || '',
+                        props.CORRIDOR || props.Corridor || props.corridor || '',
+                        props.COUNTY || props.County || props.county || '',
+                        coords[1],
+                        coords[0]
+                    ];
+
+                    const row = tableBody.insertRow();
+                    rowValues.forEach(value => {
+                        const cell = row.insertCell();
+                        cell.textContent = value === null || value === undefined ? '' : String(value);
+                    });
+                });
+            });
+
+            const agolDeathsOutsideLayer = L.esri.featureLayer({
+                url: deathsOutsideLayerUrl,
+                token: AGOL_TOKEN || undefined
+            });
+            agolDeathsOutsideLayer.query().where('1=1').run(function (error, featureCollection) {
+                if (error) {
+                    console.error('Failed to load deaths-outside-buffer features:', error);
+                    return;
+                }
+
+                const outsideFeatures = (featureCollection.features || []).filter(feature => {
+                    if (!isAllowedDeathCounty(feature)) return false;
+                    const coords = getPointCoordinates(feature);
+                    if (!coords) return false;
+                    return !isPointInsideAnyReservation(coords[0], coords[1], tohonoReservationFeatures);
+                });
+
+                deathsOutsideLayerGroup.clearLayers();
+                outsideFeatures.forEach(feature => {
+                    const props = feature.properties || {};
+                    const coords = getPointCoordinates(feature);
+                    if (!coords) return;
+
+                    const marker = deathPointToLayer(feature, L.latLng(coords[1], coords[0]));
+                    marker.bindPopup(
+                        `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                        `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                    );
+                    marker.on('click', function () {
+                        if (measurementEnabled) {
+                            measureToNearestWater(marker.getLatLng());
+                        }
+                    });
+                    marker.addTo(deathsOutsideLayerGroup);
+                });
+            });
+        }
+
+        initAgolLayers();
 
         // Zoom-to-active-data function
         function zoomToActiveData() {
             const bounds = L.latLngBounds([]);
 
-            if (map.hasLayer(waterLayerGroup)) {
-                waterLayerGroup.eachLayer(layer => {
+            if (map.hasLayer(waterStationsLayerGroup)) {
+                waterStationsLayerGroup.eachLayer(layer => {
                     if (layer.getLatLng) bounds.extend(layer.getLatLng());
                 });
             }
 
             if (map.hasLayer(migrantLayerGroup)) {
                 migrantLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (map.hasLayer(deathsOutsideLayerGroup)) {
+                deathsOutsideLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (map.hasLayer(deathsInReservationLayerGroup)) {
+                deathsInReservationLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (map.hasLayer(deaths10MilesFromWaterLayerGroup)) {
+                deaths10MilesFromWaterLayerGroup.eachLayer(layer => {
                     if (layer.getLatLng) bounds.extend(layer.getLatLng());
                 });
             }
@@ -260,13 +800,38 @@
         };
         zoomControl.addTo(map);
 
+        // In-map measurement control so users can access the tool without scrolling.
+        var measureControl = L.control({position: 'topright'});
+        measureControl.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-control');
+            div.style.background = 'white';
+            div.style.padding = '8px';
+            div.style.borderRadius = '4px';
+            div.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)';
+            div.style.maxWidth = '260px';
+            div.innerHTML =
+                '<label for="routeProfileMap" style="display: block; font-size: 12px; margin-bottom: 6px; color: #222;">Route mode:</label>' +
+                '<select id="routeProfileMap" style="padding: 6px 8px; width: 100%; margin-bottom: 8px;"><option value="driving">Driving</option><option value="walking">Walking</option></select>' +
+                '<button id="toggleMeasureMap" class="measure-button" style="padding: 6px 10px; cursor: pointer; width: 100%;">Enable nearest-water measure</button>' +
+                '<div id="measureOutputMap" style="margin-top: 8px; font-size: 12px; color: #222; line-height: 1.3;">Nearest-water measure is off.</div>';
+
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        };
+        measureControl.addTo(map);
+
         // Legend control
         var legend = L.control({position: 'bottomright'});
         legend.onAdd = function () {
             var div = L.DomUtil.create('div', 'legend');
             div.innerHTML = '<strong>Legend</strong><br>' +
-                '<i style="background: blue; border-radius: 50%; width: 12px; height: 12px;"></i> Water Stations<br>' +
-                '<i style="background: red; width: 10px; height: 10px;"></i> Migrant Deaths<br>';
+                '<i style="background: #1e88ff; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #0057d9;"></i> Water Stations<br>' +
+                '<i style="background: red; width: 10px; height: 10px;"></i> Migrant Deaths<br>' +
+                '<i style="background: #8b0000; width: 10px; height: 10px;"></i> Deaths Outside Buffer<br>' +
+                '<i style="background: #f2a900; width: 10px; height: 10px; border: 1px solid #8a5a00;"></i> Deaths in Reservation Territory<br>' +
+                '<i style="background: #e07cab; width: 10px; height: 10px; border: 1px solid #c2578a;"></i> Deaths > 10 Miles from Water<br>' +
+                '<i style="background: linear-gradient(to right, #5a0000, #ff4d4d); width: 14px; height: 10px;"></i> Heat Map of Deaths<br>' +
+                '<i style="background: linear-gradient(to right, #5a0000, #ff4d4d); width: 14px; height: 10px;"></i> Heat Map of Reservation Deaths<br>';
             return div;
         };
         legend.addTo(map);
@@ -277,6 +842,8 @@
                 layerGroup.eachLayer(marker => {
                     if (marker.getLatLng) {
                         points.push(marker.getLatLng());
+                    } else if (marker.getBounds) {
+                        points.push(marker.getBounds().getCenter());
                     }
                 });
                 if (points.length === 0) {
@@ -293,7 +860,7 @@
                 };
             }
 
-            const waterStats = layerSummary(waterLayerGroup);
+            const waterStats = layerSummary(waterStationsLayerGroup);
             const deathStats = layerSummary(migrantLayerGroup);
 
             const formatPoint = p => p ? `${p[0].toFixed(5)}, ${p[1].toFixed(5)}` : 'N/A';
@@ -322,55 +889,29 @@
         }
 
         document.getElementById('runGeoprocess').addEventListener('click', computeLayerStats);
+        function syncRouteProfile(targetValue) {
+            const baseSelect = document.getElementById('routeProfile');
+            const mapSelect = document.getElementById('routeProfileMap');
+            if (baseSelect && baseSelect.value !== targetValue) baseSelect.value = targetValue;
+            if (mapSelect && mapSelect.value !== targetValue) mapSelect.value = targetValue;
+            if (measurementEnabled) {
+                setMeasurementEnabled(true);
+            }
+        }
 
-        // Load migrant deaths from CSV
-        fetch('migrant_deaths_2021-2025.csv')
-            .then(response => response.text())
-            .then(text => {
-                const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                const tableBody = document.getElementById('migrantTableBody');
-                let startIndex = 0;
-                if (lines[0].toLowerCase().startsWith('id,')) {
-                    startIndex = 1;
-                }
+        document.getElementById('routeProfile').addEventListener('change', function (e) {
+            syncRouteProfile(e.target.value);
+        });
+        document.getElementById('routeProfileMap').addEventListener('change', function (e) {
+            syncRouteProfile(e.target.value);
+        });
+        document.getElementById('toggleMeasure').addEventListener('click', function () {
+            setMeasurementEnabled(!measurementEnabled);
+        });
+        document.getElementById('toggleMeasureMap').addEventListener('click', function () {
+            setMeasurementEnabled(!measurementEnabled);
+        });
 
-                for (let i = startIndex; i < lines.length; i++) {
-                    const values = lines[i].split(',');
-                    if (values.length < 11) continue; // skip malformed rows
-
-                    const row = tableBody.insertRow();
-                    values.forEach(value => {
-                        const cell = row.insertCell();
-                        cell.textContent = value.trim();
-                    });
-
-                    const lat = parseFloat(values[9]);
-                    const lng = parseFloat(values[10]);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        const point = L.latLng(lat, lng);
-
-                        function distToWater() {
-                            let nearest = Infinity;
-                            waterPoints.forEach(wp => {
-                                const d = point.distanceTo(L.latLng(wp[0], wp[1]));
-                                if (d < nearest) nearest = d;
-                            });
-                            return nearest;
-                        }
-
-                        const nearestDistance = distToWater();
-                        if (nearestDistance > 3218) {
-                            L.marker(point, { icon: deathOutsideIcon })
-                                .addTo(deathsOutsideLayerGroup)
-                                    .bindPopup(`Date: ${values[5]}<br>Sex: ${values[3]}<br>Age: ${values[4]}<br>Corridor: ${values[7]}<br>County: ${values[8]}`);
-                        }
-
-                        L.marker(point, { icon: deathIcon })
-                            .addTo(migrantLayerGroup)
-                                .bindPopup(`Date: ${values[5]}<br>Sex: ${values[3]}<br>Age: ${values[4]}<br>Corridor: ${values[7]}<br>County: ${values[8]}`);
-                    }
-                }
-            });
     </script>
 </body>
 </html>
