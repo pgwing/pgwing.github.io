@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -70,9 +70,13 @@
 			gap: 1.25rem;
 		}
 
+		main > section,
+		main > div {
+			width: calc(100% + 2rem);
+			margin-left: -3.5rem;
+		}
+
 		.about-map-box {
-			max-width: 1200px;
-			margin: 1rem auto 0;
 			padding: 1rem 1.25rem;
 			background: linear-gradient(120deg, #fff4de 0%, #fdebc8 100%);
 			border: 1px solid var(--line);
@@ -110,10 +114,6 @@
 		.map-panel {
 			padding: 0;
 			overflow: hidden;
-			width: calc(100vw - 2rem);
-			max-width: none;
-			margin-left: calc(50% - 50vw + 1rem);
-			margin-right: calc(50% - 50vw + 1rem);
 			border-radius: 14px;
 			border: 1px solid color-mix(in srgb, var(--line) 76%, #99866b 24%);
 			box-shadow: 0 16px 34px rgba(47, 31, 11, 0.2);
@@ -533,6 +533,8 @@
 				class="map-embed"
 				src="Project.html"
 				title="Southern Arizona water station map"
+				allow="fullscreen"
+				allowfullscreen
 				loading="eager">
 			</iframe>
 			<div class="map-caption">
@@ -623,7 +625,7 @@
 	</main>
 
 	<footer>
-		<p>Template ready. Connect your map script and replace placeholder content.</p>
+		
 	</footer>
 
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
