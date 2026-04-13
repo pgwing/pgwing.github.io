@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -545,7 +545,7 @@
 			<div class="weather-header">
 				<div>
 					<h2>Real-Time Weather</h2>
-					<p>Current conditions for key southern Arizona locations near the migration corridor and water-station network.</p>
+					<p>Current conditions for southern Arizona locations near the water station network.</p>
 				</div>
 				<div class="weather-actions">
 					<div class="weather-status" id="weatherStatus">Loading current conditions...</div>
