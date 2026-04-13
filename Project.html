@@ -18,12 +18,6 @@
             font-family: Arial, sans-serif;
             background-color: #d2b48c;
         }
-        header {
-            background-color: #333;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
         #map {
             height: 100vh;
             width: 100vw;
@@ -52,6 +46,10 @@
             border-radius: 5px;
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
         }
+        .legend.leaflet-control {
+            margin-bottom: 0;
+            margin-top: 96px;
+        }
         .legend i {
             width: 12px;
             height: 12px;
@@ -75,63 +73,118 @@
             box-shadow: 0 0 2px rgba(0,0,0,0.3);
         }
         .measure-button {
-            background: #9ed8ff;
-            color: #0b2a44;
-            border: 1px solid #69bff5;
-            border-radius: 6px;
+            background: #fffacd;
+            color: #17324d;
+            border: 1px solid #b8c7d6;
+            border-radius: 4px;
+            box-shadow: none;
             font-weight: 600;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            min-width: 110px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            white-space: nowrap;
+            padding: 0 12px !important;
             transition: background 0.2s ease;
         }
         .measure-button:hover {
-            background: #88cefb;
+            background: #ffff99;
+        }
+        .measure-button:active {
+            background: #ffff80;
+        }
+        .leaflet-control-layers-toggle {
+            background: #fffacd !important;
+            background-image: none !important;
+            width: auto !important;
+            min-width: 110px;
+            height: 36px;
+            padding: 0 12px;
+            text-indent: 0;
+            font: 600 13px/36px Arial, sans-serif;
+            color: #000;
+            text-decoration: none;
+        }
+        .leaflet-control-layers-toggle:hover,
+        .leaflet-control-layers-toggle:focus,
+        .leaflet-control-layers-toggle:active,
+        .leaflet-control-layers-toggle:visited {
+            color: #000;
+            text-decoration: none;
+        }
+        .leaflet-touch .leaflet-control-layers-toggle {
+            width: auto !important;
+            height: 36px;
+        }
+        .leaflet-control-layers-toggle::after {
+            content: 'Map Layers';
+        }
+        .leaflet-control-layers .leaflet-control-layers-list {
+            display: none !important;
+        }
+        .leaflet-control-layers.leaflet-control-layers-expanded .leaflet-control-layers-list {
+            display: block !important;
+        }
+        .map-control-button {
+            background: #fffacd;
+            color: #17324d;
+            border: 1px solid #b8c7d6;
+            border-radius: 4px;
+            min-width: 110px;
+            height: 36px;
+            padding: 0 12px;
+            font: 600 13px/36px Arial, sans-serif;
+            text-align: center;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .map-control-button:hover {
+            background: #ffff99;
+        }
+        .map-control-button:active {
+            background: #ffff80;
+        }
+        .map-control-panel {
+            display: none;
+            margin-top: 8px;
+            background: #ffffff;
+            padding: 8px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            width: 260px;
+        }
+        .map-control-panel.open {
+            display: block;
+        }
+        .time-control {
+            background: #ffffff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            width: 240px;
+        }
+        .time-control-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #17324d;
+            margin-bottom: 6px;
+        }
+        .time-control-value {
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        .time-control input[type="range"] {
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>A Map for Managing Water Stations in the Desert of Southern Arizona</h1>
-    </header>
-    
-    <div class="container">
-        <p>Drinking water locations</p>
-    </div>
-    
     <div id="map"></div>
-
-    <div class="container" style="margin-top: 10px;">
-        <button id="runGeoprocess" style="padding: 8px 12px; cursor: pointer;">Run geoprocess (count + centroid)</button>
-        <div id="geoprocessOutput" style="margin-top: 12px; font-size: 0.95rem; color: #222;"></div>
-        <label for="routeProfile" style="display: inline-block; margin-top: 10px; margin-right: 8px;">Route mode:</label>
-        <select id="routeProfile" style="padding: 6px 8px;">
-            <option value="driving">Driving</option>
-            <option value="walking">Walking</option>
-        </select>
-        <button id="toggleMeasure" class="measure-button" style="margin-top: 10px; padding: 8px 12px; cursor: pointer;">Enable nearest-water measure</button>
-        <div id="measureOutput" style="margin-top: 10px; font-size: 0.95rem; color: #222;">Nearest-water measure is off.</div>
-    </div>
-
-    <div class="container">
-        <h2>Migrant Deaths Data (2021-2025)</h2>
-        <table id="migrantTable" border="1">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Last Name</th>
-                    <th>First Name</th>
-                    <th>Sex</th>
-                    <th>Age</th>
-                    <th>Date</th>
-                    <th>Land Status</th>
-                    <th>Corridor</th>
-                    <th>County</th>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
-                </tr>
-            </thead>
-            <tbody id="migrantTableBody">
-            </tbody>
-        </table>
-    </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
@@ -141,7 +194,9 @@
     <script>
         var map = L.map('map', {
             zoomSnap: 0.5
-        }).setView([31.8800834, -111.2059306], 8.5);
+        }).setView([31.8800834, -111.5459306], 8.5);
+        map.createPane('countyBoundaryPane');
+        map.getPane('countyBoundaryPane').style.zIndex = 650;
         map.createPane('waterStationsPane');
         map.getPane('waterStationsPane').style.zIndex = 700;
 
@@ -157,18 +212,34 @@
         });
 
         var waterStationsLayerGroup = L.layerGroup().addTo(map);
-        var migrantLayerGroup = L.layerGroup().addTo(map);
-        var deathsOutsideLayerGroup = L.layerGroup().addTo(map);
-        var deathsInReservationLayerGroup = L.layerGroup().addTo(map);
-        var deaths10MilesFromWaterLayerGroup = L.layerGroup().addTo(map);
-        var deathsHeatLayerGroup = L.layerGroup().addTo(map);
-        var deathsInReservationHeatLayerGroup = L.layerGroup().addTo(map);
+        var migrantLayerGroup = L.layerGroup();
+        var deathsOutsideLayerGroup = L.layerGroup();
+        var deathsInReservationLayerGroup = L.layerGroup();
+        var summerDeathsLayerGroup = L.layerGroup();
+        var restOfYearDeathsLayerGroup = L.layerGroup();
+        var deaths10MilesFromWaterLayerGroup = L.layerGroup();
+        var deathsHeatLayerGroup = L.layerGroup();
+        var deathsInReservationHeatLayerGroup = L.layerGroup();
         var distanceMeasureLayerGroup = L.layerGroup().addTo(map);
 
         var waterStationPoints = [];
         var outsideReservationDeathFeatures = [];
+        var allOutsideReservationDeathFeatures = [];
+        var allInReservationDeathFeatures = [];
         var measurementEnabled = false;
         var currentMeasureRequestId = 0;
+        var lastMeasuredDeathLatLng = null;
+        var migrantDeathsLayerEnabled = false;
+        var hideReservationDeathsEnabled = false;
+        var timelineEnabled = false;
+        var timelineEntries = [];
+        var currentTimelineIndex = 0;
+        var timelineRangeInput = null;
+        var timelineValueLabel = null;
+        var timelineControlContainer = null;
+        var renderDeathLayers = function () {};
+        const INTERACTIVE_HIT_WEIGHT = 10;
+        const INTERACTIVE_HIT_OPACITY = 0.01;
         const ALLOWED_DEATH_COUNTIES = new Set(['yuma', 'pima', 'santa cruz']);
 
         // If your AGOL layers are private, paste a valid token string here.
@@ -193,14 +264,150 @@
             return Object.values(feature.properties).some(textContainsTohonoOodham);
         }
 
+        function normalizeCountyName(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/_/g, ' ')
+                .replace(/\bcounty\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         function getFeatureCounty(feature) {
             const props = feature && (feature.properties || feature.attributes) ? (feature.properties || feature.attributes) : {};
             const county = props.COUNTY || props.County || props.county || '';
-            return String(county).trim().toLowerCase();
+            return normalizeCountyName(county);
         }
 
         function isAllowedDeathCounty(feature) {
             return ALLOWED_DEATH_COUNTIES.has(getFeatureCounty(feature));
+        }
+
+        function isAllowedTargetCounty(value) {
+            const normalized = normalizeCountyName(value);
+            return !normalized || ALLOWED_DEATH_COUNTIES.has(normalized);
+        }
+
+        function getDeathDateParts(feature) {
+            const props = feature && (feature.properties || feature.attributes) ? (feature.properties || feature.attributes) : {};
+            const raw = props.DATE || props.Date || props.date || '';
+
+            if (typeof raw === 'number' && Number.isFinite(raw)) {
+                const asDate = raw > 1e11 ? new Date(raw) : (raw > 1e9 ? new Date(raw * 1000) : null);
+                if (asDate && !Number.isNaN(asDate.getTime())) {
+                    return {
+                        year: asDate.getUTCFullYear(),
+                        month: asDate.getUTCMonth() + 1
+                    };
+                }
+            }
+
+            const text = String(raw).trim();
+            if (!text) return null;
+
+            const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+            if (slashMatch) {
+                const month = Number(slashMatch[1]);
+                const year = Number(slashMatch[3]);
+                if (Number.isFinite(month) && Number.isFinite(year)) {
+                    return { year, month };
+                }
+            }
+
+            const parsed = new Date(text);
+            if (Number.isNaN(parsed.getTime())) return null;
+            return {
+                year: parsed.getUTCFullYear(),
+                month: parsed.getUTCMonth() + 1
+            };
+        }
+
+        function getDeathMonth(feature) {
+            const parts = getDeathDateParts(feature);
+            return parts ? parts.month : null;
+        }
+
+        function isSummerDeath(feature) {
+            const month = getDeathMonth(feature);
+            return month === 6 || month === 7 || month === 8 || month === 9;
+        }
+
+        function isRestOfYearDeath(feature) {
+            const month = getDeathMonth(feature);
+            return month === 10 || month === 11 || month === 12 || month === 1 || month === 2 || month === 3 || month === 4 || month === 5;
+        }
+
+        function getDeathMonthIndex(feature) {
+            const parts = getDeathDateParts(feature);
+            return parts ? (parts.year * 12) + (parts.month - 1) : null;
+        }
+
+        function buildTimelineEntries(features) {
+            const keys = features
+                .map(getDeathMonthIndex)
+                .filter(value => Number.isFinite(value))
+                .sort((a, b) => a - b);
+
+            if (keys.length === 0) return [];
+
+            const entries = [];
+            const january2021Key = (2021 * 12);
+            const startKey = january2021Key;
+            for (let key = startKey; key <= keys[keys.length - 1]; key += 1) {
+                entries.push({
+                    key,
+                    year: Math.floor(key / 12),
+                    month: (key % 12) + 1
+                });
+            }
+            return entries;
+        }
+
+        function formatTimelineEntry(entry) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            return `${monthNames[entry.month - 1]} ${entry.year}`;
+        }
+
+        function featurePassesTimeline(feature) {
+            if (!timelineEnabled) return true;
+            if (!timelineEntries.length) return true;
+            const featureKey = getDeathMonthIndex(feature);
+            if (!Number.isFinite(featureKey)) return false;
+            const activeEntry = timelineEntries[Math.min(currentTimelineIndex, timelineEntries.length - 1)];
+            return featureKey === activeEntry.key;
+        }
+
+        function setTimelineControlVisibility(visible) {
+            if (!timelineControlContainer) return;
+            timelineControlContainer.style.display = visible ? 'block' : 'none';
+        }
+
+        function updateTimelineControl() {
+            if (!timelineRangeInput || !timelineValueLabel) return;
+
+            if (!timelineEntries.length) {
+                timelineRangeInput.disabled = true;
+                timelineRangeInput.min = '0';
+                timelineRangeInput.max = '0';
+                timelineRangeInput.value = '0';
+                timelineValueLabel.textContent = 'Timeline unavailable';
+                return;
+            }
+
+            currentTimelineIndex = Math.max(0, Math.min(currentTimelineIndex, timelineEntries.length - 1));
+            timelineRangeInput.disabled = false;
+            timelineRangeInput.min = '0';
+            timelineRangeInput.max = String(timelineEntries.length - 1);
+            timelineRangeInput.value = String(currentTimelineIndex);
+            timelineValueLabel.textContent = `Showing deaths in ${formatTimelineEntry(timelineEntries[currentTimelineIndex])}`;
+        }
+
+        function setTimelineIndex(index) {
+            if (!timelineEntries.length) return;
+            currentTimelineIndex = Math.max(0, Math.min(index, timelineEntries.length - 1));
+            updateTimelineControl();
+            renderDeathLayers();
         }
 
         function isPointInsideAnyReservation(lon, lat, reservationFeatures) {
@@ -256,7 +463,8 @@
                 const marker = L.circleMarker(deathLatLng, {
                     radius: 4,
                     color: '#c2578a',
-                    weight: 1,
+                    weight: INTERACTIVE_HIT_WEIGHT,
+                    opacity: INTERACTIVE_HIT_OPACITY,
                     fillColor: '#e07cab',
                     fillOpacity: 0.95
                 });
@@ -277,13 +485,22 @@
         }
 
         function getRouteProfile() {
-            const select = document.getElementById('routeProfileMap') || document.getElementById('routeProfile');
+            const select = document.getElementById('routeProfileMap');
             const value = select ? select.value : 'driving';
-            return value === 'walking' ? 'walking' : 'driving';
+            if (value === 'walking') return 'walking';
+            if (value === 'straight') return 'straight';
+            return 'driving';
         }
 
         function formatRouteMode(profile) {
-            return profile === 'walking' ? 'Walking' : 'Driving';
+            if (profile === 'walking') return 'Walking';
+            if (profile === 'straight') return 'Straight line';
+            return 'Driving';
+        }
+
+        function isSameMeasuredPoint(a, b) {
+            if (!a || !b) return false;
+            return map.distance(a, b) < 1;
         }
 
         async function fetchRouteMetrics(startLatLng, endLatLng, profile) {
@@ -313,6 +530,15 @@
             const outputMap = document.getElementById('measureOutputMap');
             const profile = getRouteProfile();
             const modeLabel = formatRouteMode(profile);
+            const hasActiveMeasurement = distanceMeasureLayerGroup.getLayers().length > 0;
+
+            if (hasActiveMeasurement && isSameMeasuredPoint(deathLatLng, lastMeasuredDeathLatLng)) {
+                distanceMeasureLayerGroup.clearLayers();
+                lastMeasuredDeathLatLng = null;
+                if (output) output.textContent = `Measurement is on (${modeLabel}). Click any death point to measure to the nearest water station.`;
+                if (outputMap) outputMap.textContent = `Measurement is on (${modeLabel}). Click any death point to measure to the nearest water station.`;
+                return;
+            }
 
             distanceMeasureLayerGroup.clearLayers();
 
@@ -322,25 +548,32 @@
                 return;
             }
 
-            if (output) output.textContent = `Calculating ${modeLabel.toLowerCase()} route...`;
-            if (outputMap) outputMap.textContent = `Calculating ${modeLabel.toLowerCase()} route...`;
+            if (profile === 'straight') {
+                if (output) output.textContent = 'Calculating straight-line distance...';
+                if (outputMap) outputMap.textContent = 'Calculating straight-line distance...';
+            } else {
+                if (output) output.textContent = `Calculating ${modeLabel.toLowerCase()} route...`;
+                if (outputMap) outputMap.textContent = `Calculating ${modeLabel.toLowerCase()} route...`;
+            }
 
             let meters = result.meters;
             let usedRoute = false;
             let routeLatLngs = [deathLatLng, result.station.latlng];
 
-            try {
-                const routeResult = await fetchRouteMetrics(deathLatLng, result.station.latlng, profile);
-                if (requestId !== currentMeasureRequestId) return;
+            if (profile !== 'straight') {
+                try {
+                    const routeResult = await fetchRouteMetrics(deathLatLng, result.station.latlng, profile);
+                    if (requestId !== currentMeasureRequestId) return;
 
-                if (Number.isFinite(routeResult.meters)) {
-                    meters = routeResult.meters;
+                    if (Number.isFinite(routeResult.meters)) {
+                        meters = routeResult.meters;
+                    }
+
+                    routeLatLngs = routeResult.coordinates.map(coord => L.latLng(coord[1], coord[0]));
+                    usedRoute = routeLatLngs.length > 1;
+                } catch (_err) {
+                    // Keep straight-line fallback if routing is unavailable.
                 }
-
-                routeLatLngs = routeResult.coordinates.map(coord => L.latLng(coord[1], coord[0]));
-                usedRoute = routeLatLngs.length > 1;
-            } catch (_err) {
-                // Keep straight-line fallback if routing is unavailable.
             }
 
             if (requestId !== currentMeasureRequestId) return;
@@ -357,7 +590,8 @@
             L.circleMarker(deathLatLng, {
                 radius: 6,
                 color: '#5a0000',
-                weight: 2,
+                weight: INTERACTIVE_HIT_WEIGHT,
+                opacity: INTERACTIVE_HIT_OPACITY,
                 fillColor: '#5a0000',
                 fillOpacity: 1
             }).addTo(distanceMeasureLayerGroup);
@@ -365,7 +599,8 @@
             L.circleMarker(result.station.latlng, {
                 radius: 7,
                 color: '#0057d9',
-                weight: 2,
+                weight: INTERACTIVE_HIT_WEIGHT,
+                opacity: INTERACTIVE_HIT_OPACITY,
                 fillColor: '#1e88ff',
                 fillOpacity: 1
             }).addTo(distanceMeasureLayerGroup);
@@ -384,44 +619,172 @@
 
             if (output) output.innerHTML = resultHtml;
             if (outputMap) outputMap.innerHTML = resultHtml;
+            lastMeasuredDeathLatLng = L.latLng(deathLatLng.lat, deathLatLng.lng);
         }
 
         function setMeasurementEnabled(enabled) {
             measurementEnabled = enabled;
 
-            const btn = document.getElementById('toggleMeasure');
             const output = document.getElementById('measureOutput');
             const btnMap = document.getElementById('toggleMeasureMap');
             const outputMap = document.getElementById('measureOutputMap');
 
             if (enabled) {
-                if (btn) btn.textContent = 'Disable nearest-water measure';
                 if (btnMap) btnMap.textContent = 'Disable nearest-water measure';
                 if (output) output.textContent = `Measurement is on (${formatRouteMode(getRouteProfile())}). Click any death point to measure to the nearest water station.`;
                 if (outputMap) outputMap.textContent = `Measurement is on (${formatRouteMode(getRouteProfile())}). Click any death point to measure to the nearest water station.`;
             } else {
-                if (btn) btn.textContent = 'Enable nearest-water measure';
                 if (btnMap) btnMap.textContent = 'Enable nearest-water measure';
                 if (output) output.textContent = 'Nearest-water measure is off.';
                 if (outputMap) outputMap.textContent = 'Nearest-water measure is off.';
                 distanceMeasureLayerGroup.clearLayers();
+                lastMeasuredDeathLatLng = null;
             }
         }
 
+        function applyReservationVisibility() {
+            if (!migrantDeathsLayerEnabled || hideReservationDeathsEnabled) {
+                map.removeLayer(deathsInReservationLayerGroup);
+                map.removeLayer(deathsInReservationHeatLayerGroup);
+                return;
+            }
+
+            deathsInReservationLayerGroup.addTo(map);
+            deathsInReservationHeatLayerGroup.addTo(map);
+        }
+
+        var MigrantDeathsToggleLayer = L.Layer.extend({
+            onAdd: function () {
+                migrantDeathsLayerEnabled = true;
+                migrantLayerGroup.addTo(map);
+                deathsHeatLayerGroup.addTo(map);
+                applyReservationVisibility();
+            },
+            onRemove: function () {
+                migrantDeathsLayerEnabled = false;
+                map.removeLayer(migrantLayerGroup);
+                map.removeLayer(deathsHeatLayerGroup);
+                map.removeLayer(deathsInReservationLayerGroup);
+                map.removeLayer(deathsInReservationHeatLayerGroup);
+            }
+        });
+
+        var HideReservationToggleLayer = L.Layer.extend({
+            onAdd: function () {
+                hideReservationDeathsEnabled = true;
+                applyReservationVisibility();
+            },
+            onRemove: function () {
+                hideReservationDeathsEnabled = false;
+                applyReservationVisibility();
+            }
+        });
+
+        var TimelineToggleLayer = L.Layer.extend({
+            onAdd: function () {
+                timelineEnabled = true;
+                setTimelineControlVisibility(true);
+                updateTimelineControl();
+                renderDeathLayers();
+            },
+            onRemove: function () {
+                timelineEnabled = false;
+                setTimelineControlVisibility(false);
+                renderDeathLayers();
+            }
+        });
+
+        var migrantDeathsToggleLayer = new MigrantDeathsToggleLayer();
+        var hideReservationToggleLayer = new HideReservationToggleLayer();
+        var timelineToggleLayer = new TimelineToggleLayer();
+
+        // Draw Arizona county boundaries as a static reference overlay.
+        async function loadArizonaCountyBoundaries() {
+            const countiesGeoJsonUrl = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json';
+
+            try {
+                const response = await fetch(countiesGeoJsonUrl);
+                if (!response.ok) throw new Error('County boundary request failed');
+
+                const geojson = await response.json();
+                const features = Array.isArray(geojson && geojson.features) ? geojson.features : [];
+                const arizonaFeatures = features.filter(feature => {
+                    const fips = String(feature && feature.id ? feature.id : '');
+                    return fips.startsWith('04');
+                });
+
+                if (arizonaFeatures.length === 0) {
+                    throw new Error('No Arizona county features found');
+                }
+
+                L.geoJSON({
+                    type: 'FeatureCollection',
+                    features: arizonaFeatures
+                }, {
+                    pane: 'countyBoundaryPane',
+                    interactive: false,
+                    style: {
+                        color: '#3f2f20',
+                        weight: 2.2,
+                        opacity: 0.98,
+                        fill: false
+                    }
+                }).addTo(map);
+            } catch (err) {
+                console.warn('Arizona county boundaries failed to load:', err);
+            }
+        }
+
+        loadArizonaCountyBoundaries();
+
         streetLayer.addTo(map);
 
-        L.control.layers({
-            'Streets': streetLayer,
-            'Terrain': terrainLayer
-        }, {
+        var layersControl = L.control.layers(null, {
             'Water Stations': waterStationsLayerGroup,
-            'Migrant Deaths': migrantLayerGroup,
-            'Migrant Deaths Outside Buffer': deathsOutsideLayerGroup,
-            'Deaths in Reservation Territory': deathsInReservationLayerGroup,
-            'Deaths > 10 Miles from Water': deaths10MilesFromWaterLayerGroup,
-            'Heat Map of Deaths': deathsHeatLayerGroup,
-            'Heat Map of Reservation Deaths': deathsInReservationHeatLayerGroup
+            'Migrant Deaths': migrantDeathsToggleLayer,
+            'Hide deaths on reservation': hideReservationToggleLayer,
+            'Time slider': timelineToggleLayer,
+            'Deaths in June, July, August, and September': summerDeathsLayerGroup,
+            'Deaths the rest of the year': restOfYearDeathsLayerGroup,
+            'Deaths > 10 miles from water station': deaths10MilesFromWaterLayerGroup
         }).addTo(map);
+
+        migrantDeathsToggleLayer.addTo(map);
+
+        // Use click-to-toggle for layers on desktop instead of hover-to-open.
+        var layersContainer = layersControl.getContainer();
+        if (layersContainer) {
+            L.DomEvent.off(layersContainer, 'mouseenter', layersControl.expand, layersControl);
+            L.DomEvent.off(layersContainer, 'mouseleave', layersControl.collapse, layersControl);
+            L.DomEvent.off(layersContainer, 'mouseover', layersControl.expand, layersControl);
+            L.DomEvent.off(layersContainer, 'mouseout', layersControl.collapse, layersControl);
+            L.DomEvent.off(layersContainer, 'mouseenter', layersControl._expandSafely, layersControl);
+            L.DomEvent.off(layersContainer, 'mouseover', layersControl._expandSafely, layersControl);
+
+            var layersToggle = layersContainer.querySelector('.leaflet-control-layers-toggle');
+            var layersList = layersContainer.querySelector('.leaflet-control-layers-list');
+            var layersOpen = false;
+
+            if (layersList) {
+                layersList.style.display = 'none';
+            }
+
+            if (layersToggle) {
+                L.DomEvent.on(layersToggle, 'mousedown', L.DomEvent.stopPropagation);
+                L.DomEvent.on(layersToggle, 'click', function (e) {
+                    L.DomEvent.stop(e);
+                    layersOpen = !layersOpen;
+
+                    if (layersOpen) {
+                        L.DomUtil.addClass(layersContainer, 'leaflet-control-layers-expanded');
+                        if (layersList) layersList.style.display = 'block';
+                    } else {
+                        L.DomUtil.removeClass(layersContainer, 'leaflet-control-layers-expanded');
+                        if (layersList) layersList.style.display = 'none';
+                    }
+                });
+            }
+        }
 
         async function resolveFeatureLayerUrl(serviceUrl) {
             if (/\/FeatureServer\/\d+$/.test(serviceUrl)) {
@@ -452,7 +815,8 @@
                 return L.circleMarker(latlng, {
                     radius: 4,
                     color: '#5a0000',
-                    weight: 1,
+                    weight: INTERACTIVE_HIT_WEIGHT,
+                    opacity: INTERACTIVE_HIT_OPACITY,
                     fillColor: '#5a0000',
                     fillOpacity: 0.95
                 });
@@ -462,7 +826,8 @@
                 return L.circleMarker(latlng, {
                     radius: 4,
                     color: '#5a0000',
-                    weight: 1,
+                    weight: INTERACTIVE_HIT_WEIGHT,
+                    opacity: INTERACTIVE_HIT_OPACITY,
                     fillColor: '#5a0000',
                     fillOpacity: 0.95
                 });
@@ -484,6 +849,8 @@
                 waterStationPoints = [];
                 features.forEach(feature => {
                     const props = feature.properties || feature.attributes || {};
+                    const stationCounty = props.COUNTY || props.County || props.county || props.COUNTY_NAME || props.county_name || '';
+                    if (!isAllowedTargetCounty(stationCounty)) return;
                     const coords = getPointCoordinates(feature);
 
                     let latlng = null;
@@ -512,14 +879,28 @@
                         ? 'No station name available'
                         : String(props.name);
 
+                    const stationTypeRaw =
+                        props.type ||
+                        props.TYPE ||
+                        props.station_type ||
+                        props.STATION_TYPE ||
+                        props.stationType ||
+                        props.TYPE_ ||
+                        '';
+                    const stationType = String(stationTypeRaw || '').replace(/_/g, ' ').trim() || 'Not provided';
+
                     const stationMarker = L.circleMarker(latlng, {
                         pane: 'waterStationsPane',
                         radius: 5,
                         color: '#0057d9',
-                        weight: 1,
+                        weight: INTERACTIVE_HIT_WEIGHT,
+                        opacity: INTERACTIVE_HIT_OPACITY,
                         fillColor: '#1e88ff',
                         fillOpacity: 0.95
-                    }).bindPopup(`${stationName}`);
+                    }).bindPopup(
+                        `<strong>${stationName}</strong><br>` +
+                        `Type: ${stationType}`
+                    );
 
                     stationMarker.on('click', function (e) {
                         if (e && e.originalEvent) {
@@ -582,124 +963,157 @@
                     return isPointInsideAnyReservation(coords[0], coords[1], tohonoReservationFeatures);
                 });
 
-                outsideReservationDeathFeatures = filteredFeatures;
-                refresh10MilesFromWaterLayer();
+                allOutsideReservationDeathFeatures = filteredFeatures;
+                allInReservationDeathFeatures = inReservationFeatures;
+                timelineEntries = buildTimelineEntries(countyFilteredFeatures);
+                currentTimelineIndex = 0;
 
-                migrantLayerGroup.clearLayers();
-                filteredFeatures.forEach(feature => {
-                    const props = feature.properties || {};
-                    const coords = getPointCoordinates(feature);
-                    if (!coords) return;
+                renderDeathLayers = function () {
+                    const visibleOutsideFeatures = allOutsideReservationDeathFeatures.filter(featurePassesTimeline);
+                    const visibleReservationFeatures = allInReservationDeathFeatures.filter(featurePassesTimeline);
 
-                    const marker = deathPointToLayer(feature, L.latLng(coords[1], coords[0]));
-                    marker.bindPopup(
-                        `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
-                        `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
-                    );
-                    marker.on('click', function () {
-                        if (measurementEnabled) {
-                            measureToNearestWater(marker.getLatLng());
+                    outsideReservationDeathFeatures = visibleOutsideFeatures;
+                    refresh10MilesFromWaterLayer();
+
+                    migrantLayerGroup.clearLayers();
+                    summerDeathsLayerGroup.clearLayers();
+                    restOfYearDeathsLayerGroup.clearLayers();
+                    deathsInReservationLayerGroup.clearLayers();
+
+                    visibleOutsideFeatures.forEach(feature => {
+                        const props = feature.properties || {};
+                        const coords = getPointCoordinates(feature);
+                        if (!coords) return;
+
+                        const marker = deathPointToLayer(feature, L.latLng(coords[1], coords[0]));
+                        marker.bindPopup(
+                            `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                            `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                        );
+                        marker.on('click', function () {
+                            if (measurementEnabled) {
+                                measureToNearestWater(marker.getLatLng());
+                            }
+                        });
+                        marker.addTo(migrantLayerGroup);
+
+                        if (isSummerDeath(feature)) {
+                            const summerMarker = L.circleMarker(L.latLng(coords[1], coords[0]), {
+                                radius: 4,
+                                color: '#b38b00',
+                                weight: INTERACTIVE_HIT_WEIGHT,
+                                opacity: INTERACTIVE_HIT_OPACITY,
+                                fillColor: '#f4d03f',
+                                fillOpacity: 0.95
+                            });
+                            summerMarker.bindPopup(
+                                `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                                `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                            );
+                            summerMarker.on('click', function () {
+                                if (measurementEnabled) {
+                                    measureToNearestWater(summerMarker.getLatLng());
+                                }
+                            });
+                            summerMarker.addTo(summerDeathsLayerGroup);
                         }
-                    });
-                    marker.addTo(migrantLayerGroup);
-                });
 
-                deathsInReservationLayerGroup.clearLayers();
-                inReservationFeatures.forEach(feature => {
-                    const props = feature.properties || {};
-                    const coords = getPointCoordinates(feature);
-                    if (!coords) return;
-
-                    const marker = reservationDeathPointToLayer(feature, L.latLng(coords[1], coords[0]));
-                    marker.bindPopup(
-                        `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
-                        `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
-                    );
-                    marker.on('click', function () {
-                        if (measurementEnabled) {
-                            measureToNearestWater(marker.getLatLng());
-                        }
-                    });
-                    marker.addTo(deathsInReservationLayerGroup);
-                });
-
-                if (typeof L.heatLayer === 'function') {
-                    const heatPoints = filteredFeatures
-                        .map(feature => {
-                            const coords = getPointCoordinates(feature);
-                            if (!coords) return null;
-                            return [coords[1], coords[0], 0.8];
-                        })
-                        .filter(Boolean);
-
-                    const deathsHeatLayer = L.heatLayer(heatPoints, {
-                        radius: 20,
-                        blur: 15,
-                        maxZoom: 11,
-                        minOpacity: 0.35,
-                        gradient: {
-                            0.2: '#5a0000',
-                            0.5: '#8b0000',
-                            0.8: '#b22222',
-                            1.0: '#ff4d4d'
-                        }
-                    });
-
-                    deathsHeatLayerGroup.clearLayers();
-                    deathsHeatLayerGroup.addLayer(deathsHeatLayer);
-
-                    const reservationHeatPoints = inReservationFeatures
-                        .map(feature => {
-                            const coords = getPointCoordinates(feature);
-                            if (!coords) return null;
-                            return [coords[1], coords[0], 0.8];
-                        })
-                        .filter(Boolean);
-
-                    const reservationDeathsHeatLayer = L.heatLayer(reservationHeatPoints, {
-                        radius: 20,
-                        blur: 15,
-                        maxZoom: 11,
-                        minOpacity: 0.35,
-                        gradient: {
-                            0.2: '#5a0000',
-                            0.5: '#8b0000',
-                            0.8: '#b22222',
-                            1.0: '#ff4d4d'
+                        if (isRestOfYearDeath(feature)) {
+                            const restOfYearMarker = L.circleMarker(L.latLng(coords[1], coords[0]), {
+                                radius: 4,
+                                color: '#2f7d32',
+                                weight: INTERACTIVE_HIT_WEIGHT,
+                                opacity: INTERACTIVE_HIT_OPACITY,
+                                fillColor: '#63b66d',
+                                fillOpacity: 0.95
+                            });
+                            restOfYearMarker.bindPopup(
+                                `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                                `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                            );
+                            restOfYearMarker.on('click', function () {
+                                if (measurementEnabled) {
+                                    measureToNearestWater(restOfYearMarker.getLatLng());
+                                }
+                            });
+                            restOfYearMarker.addTo(restOfYearDeathsLayerGroup);
                         }
                     });
 
-                    deathsInReservationHeatLayerGroup.clearLayers();
-                    deathsInReservationHeatLayerGroup.addLayer(reservationDeathsHeatLayer);
-                }
+                    visibleReservationFeatures.forEach(feature => {
+                        const props = feature.properties || {};
+                        const coords = getPointCoordinates(feature);
+                        if (!coords) return;
 
-                const tableBody = document.getElementById('migrantTableBody');
-                tableBody.innerHTML = '';
-
-                filteredFeatures.forEach(feature => {
-                    const props = feature.properties || {};
-                    const coords = getPointCoordinates(feature) || ['', ''];
-
-                    const rowValues = [
-                        props.ID || props.Id || props.id || '',
-                        props.LAST_NAME || props.LASTNAME || props.LastName || props.LAST || '',
-                        props.FIRST_NAME || props.FIRSTNAME || props.FirstName || props.FIRST || '',
-                        props.SEX || props.Sex || props.sex || '',
-                        props.AGE || props.Age || props.age || '',
-                        props.DATE || props.Date || props.date || '',
-                        props.LAND_STATUS || props.LANDSTATUS || props.LandStatus || '',
-                        props.CORRIDOR || props.Corridor || props.corridor || '',
-                        props.COUNTY || props.County || props.county || '',
-                        coords[1],
-                        coords[0]
-                    ];
-
-                    const row = tableBody.insertRow();
-                    rowValues.forEach(value => {
-                        const cell = row.insertCell();
-                        cell.textContent = value === null || value === undefined ? '' : String(value);
+                        const marker = reservationDeathPointToLayer(feature, L.latLng(coords[1], coords[0]));
+                        marker.bindPopup(
+                            `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
+                            `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
+                        );
+                        marker.on('click', function () {
+                            if (measurementEnabled) {
+                                measureToNearestWater(marker.getLatLng());
+                            }
+                        });
+                        marker.addTo(deathsInReservationLayerGroup);
                     });
-                });
+
+                    if (typeof L.heatLayer === 'function') {
+                        const heatPoints = visibleOutsideFeatures
+                            .map(feature => {
+                                const coords = getPointCoordinates(feature);
+                                if (!coords) return null;
+                                return [coords[1], coords[0], 0.8];
+                            })
+                            .filter(Boolean);
+
+                        const deathsHeatLayer = L.heatLayer(heatPoints, {
+                            radius: 20,
+                            blur: 15,
+                            maxZoom: 11,
+                            minOpacity: 0.35,
+                            gradient: {
+                                0.2: '#5a0000',
+                                0.5: '#8b0000',
+                                0.8: '#b22222',
+                                1.0: '#ff4d4d'
+                            }
+                        });
+
+                        deathsHeatLayerGroup.clearLayers();
+                        deathsHeatLayerGroup.addLayer(deathsHeatLayer);
+
+                        const reservationHeatPoints = visibleReservationFeatures
+                            .map(feature => {
+                                const coords = getPointCoordinates(feature);
+                                if (!coords) return null;
+                                return [coords[1], coords[0], 0.8];
+                            })
+                            .filter(Boolean);
+
+                        const reservationDeathsHeatLayer = L.heatLayer(reservationHeatPoints, {
+                            radius: 20,
+                            blur: 15,
+                            maxZoom: 11,
+                            minOpacity: 0.35,
+                            gradient: {
+                                0.2: '#5a0000',
+                                0.5: '#8b0000',
+                                0.8: '#b22222',
+                                1.0: '#ff4d4d'
+                            }
+                        });
+
+                        deathsInReservationHeatLayerGroup.clearLayers();
+                        deathsInReservationHeatLayerGroup.addLayer(reservationDeathsHeatLayer);
+                    }
+
+                    applyReservationVisibility();
+                };
+
+                updateTimelineControl();
+                renderDeathLayers();
+
             });
 
             const agolDeathsOutsideLayer = L.esri.featureLayer({
@@ -758,12 +1172,6 @@
                 });
             }
 
-            if (map.hasLayer(deathsOutsideLayerGroup)) {
-                deathsOutsideLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
             if (map.hasLayer(deathsInReservationLayerGroup)) {
                 deathsInReservationLayerGroup.eachLayer(layer => {
                     if (layer.getLatLng) bounds.extend(layer.getLatLng());
@@ -772,6 +1180,18 @@
 
             if (map.hasLayer(deaths10MilesFromWaterLayerGroup)) {
                 deaths10MilesFromWaterLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (map.hasLayer(summerDeathsLayerGroup)) {
+                summerDeathsLayerGroup.eachLayer(layer => {
+                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+            }
+
+            if (map.hasLayer(restOfYearDeathsLayerGroup)) {
+                restOfYearDeathsLayerGroup.eachLayer(layer => {
                     if (layer.getLatLng) bounds.extend(layer.getLatLng());
                 });
             }
@@ -804,109 +1224,84 @@
         var measureControl = L.control({position: 'topright'});
         measureControl.onAdd = function () {
             var div = L.DomUtil.create('div', 'leaflet-control');
-            div.style.background = 'white';
-            div.style.padding = '8px';
-            div.style.borderRadius = '4px';
-            div.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)';
-            div.style.maxWidth = '260px';
+            div.style.background = 'transparent';
+            div.style.padding = '0';
+            div.style.borderRadius = '0';
+            div.style.boxShadow = 'none';
+            div.style.maxWidth = 'none';
             div.innerHTML =
+                '<button id="measureControlToggle" class="map-control-button" type="button">Measure distance to water</button>' +
+                '<div id="measureControlPanel" class="map-control-panel">' +
                 '<label for="routeProfileMap" style="display: block; font-size: 12px; margin-bottom: 6px; color: #222;">Route mode:</label>' +
-                '<select id="routeProfileMap" style="padding: 6px 8px; width: 100%; margin-bottom: 8px;"><option value="driving">Driving</option><option value="walking">Walking</option></select>' +
-                '<button id="toggleMeasureMap" class="measure-button" style="padding: 6px 10px; cursor: pointer; width: 100%;">Enable nearest-water measure</button>' +
-                '<div id="measureOutputMap" style="margin-top: 8px; font-size: 12px; color: #222; line-height: 1.3;">Nearest-water measure is off.</div>';
+                '<select id="routeProfileMap" style="padding: 6px 8px; width: 100%; margin-bottom: 8px;"><option value="driving">Driving</option><option value="walking">Walking</option><option value="straight">Straight line</option></select>' +
+                '<button id="toggleMeasureMap" class="measure-button" style="cursor: pointer; width: 100%;">Enable nearest-water measure</button>' +
+                '<div id="measureOutputMap" style="margin-top: 8px; font-size: 12px; color: #222; line-height: 1.3;">Nearest-water measure is off.</div>' +
+                '</div>';
 
             L.DomEvent.disableClickPropagation(div);
             return div;
         };
         measureControl.addTo(map);
 
+        var measureControlToggle = document.getElementById('measureControlToggle');
+        var measureControlPanel = document.getElementById('measureControlPanel');
+        if (measureControlToggle && measureControlPanel) {
+            measureControlToggle.addEventListener('click', function () {
+                measureControlPanel.classList.toggle('open');
+            });
+
+            map.on('click', function () {
+                measureControlPanel.classList.remove('open');
+            });
+        }
+
+        var timelineControl = L.control({position: 'topleft'});
+        timelineControl.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-control time-control');
+            div.innerHTML =
+                '<label class="time-control-label" for="timelineRange">Deaths Over Time</label>' +
+                '<div id="timelineValue" class="time-control-value">Loading timeline...</div>' +
+                '<input id="timelineRange" type="range" min="0" max="0" value="0" disabled>';
+
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        };
+        timelineControl.addTo(map);
+
+        timelineRangeInput = document.getElementById('timelineRange');
+        timelineValueLabel = document.getElementById('timelineValue');
+        timelineControlContainer = timelineRangeInput ? timelineRangeInput.closest('.time-control') : null;
+        setTimelineControlVisibility(false);
+        if (timelineRangeInput) {
+            timelineRangeInput.addEventListener('input', function (e) {
+                setTimelineIndex(Number(e.target.value));
+            });
+        }
+
         // Legend control
-        var legend = L.control({position: 'bottomright'});
+        var legend = L.control({position: 'topright'});
         legend.onAdd = function () {
             var div = L.DomUtil.create('div', 'legend');
             div.innerHTML = '<strong>Legend</strong><br>' +
                 '<i style="background: #1e88ff; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #0057d9;"></i> Water Stations<br>' +
-                '<i style="background: red; width: 10px; height: 10px;"></i> Migrant Deaths<br>' +
-                '<i style="background: #8b0000; width: 10px; height: 10px;"></i> Deaths Outside Buffer<br>' +
-                '<i style="background: #f2a900; width: 10px; height: 10px; border: 1px solid #8a5a00;"></i> Deaths in Reservation Territory<br>' +
-                '<i style="background: #e07cab; width: 10px; height: 10px; border: 1px solid #c2578a;"></i> Deaths > 10 Miles from Water<br>' +
-                '<i style="background: linear-gradient(to right, #5a0000, #ff4d4d); width: 14px; height: 10px;"></i> Heat Map of Deaths<br>' +
-                '<i style="background: linear-gradient(to right, #5a0000, #ff4d4d); width: 14px; height: 10px;"></i> Heat Map of Reservation Deaths<br>';
+                '<i style="background: red; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #8b0000;"></i> Deaths<br>' +
+                '<i style="background: #f4d03f; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #b38b00;"></i> Deaths in June, July, August, and September<br>' +
+                '<i style="background: #63b66d; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #2f7d32;"></i> Deaths the rest of the year<br>' +
+                '<i style="background: #e07cab; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #c2578a;"></i> Deaths > 10 Miles from Water<br>';
             return div;
         };
         legend.addTo(map);
 
-        function computeLayerStats() {
-            function layerSummary(layerGroup) {
-                const points = [];
-                layerGroup.eachLayer(marker => {
-                    if (marker.getLatLng) {
-                        points.push(marker.getLatLng());
-                    } else if (marker.getBounds) {
-                        points.push(marker.getBounds().getCenter());
-                    }
-                });
-                if (points.length === 0) {
-                    return { count: 0, centroid: null };
-                }
-                let latSum = 0, lngSum = 0;
-                points.forEach(pt => {
-                    latSum += pt.lat;
-                    lngSum += pt.lng;
-                });
-                return {
-                    count: points.length,
-                    centroid: [latSum / points.length, lngSum / points.length]
-                };
-            }
-
-            const waterStats = layerSummary(waterStationsLayerGroup);
-            const deathStats = layerSummary(migrantLayerGroup);
-
-            const formatPoint = p => p ? `${p[0].toFixed(5)}, ${p[1].toFixed(5)}` : 'N/A';
-
-            document.getElementById('geoprocessOutput').innerHTML =
-                `<strong>Geoprocessing results</strong><br>` +
-                `Water stations: ${waterStats.count} points; centroid ${formatPoint(waterStats.centroid)}<br>` +
-                `Migrant deaths: ${deathStats.count} points; centroid ${formatPoint(deathStats.centroid)}<br>`;
-
-            if (waterStats.centroid) {
-                L.circle([waterStats.centroid[0], waterStats.centroid[1]], {
-                    color: 'blue',
-                    weight: 2,
-                    radius: 2000,
-                    fillOpacity: 0.1
-                }).addTo(map);
-            }
-            if (deathStats.centroid) {
-                L.circle([deathStats.centroid[0], deathStats.centroid[1]], {
-                    color: 'red',
-                    weight: 2,
-                    radius: 2000,
-                    fillOpacity: 0.08
-                }).addTo(map);
-            }
-        }
-
-        document.getElementById('runGeoprocess').addEventListener('click', computeLayerStats);
         function syncRouteProfile(targetValue) {
-            const baseSelect = document.getElementById('routeProfile');
             const mapSelect = document.getElementById('routeProfileMap');
-            if (baseSelect && baseSelect.value !== targetValue) baseSelect.value = targetValue;
             if (mapSelect && mapSelect.value !== targetValue) mapSelect.value = targetValue;
             if (measurementEnabled) {
                 setMeasurementEnabled(true);
             }
         }
 
-        document.getElementById('routeProfile').addEventListener('change', function (e) {
-            syncRouteProfile(e.target.value);
-        });
         document.getElementById('routeProfileMap').addEventListener('change', function (e) {
             syncRouteProfile(e.target.value);
-        });
-        document.getElementById('toggleMeasure').addEventListener('click', function () {
-            setMeasurementEnabled(!measurementEnabled);
         });
         document.getElementById('toggleMeasureMap').addEventListener('click', function () {
             setMeasurementEnabled(!measurementEnabled);
