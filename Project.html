@@ -240,7 +240,11 @@
         var renderDeathLayers = function () {};
         const INTERACTIVE_HIT_WEIGHT = 10;
         const INTERACTIVE_HIT_OPACITY = 0.01;
+        const POPUP_HIDE_RADIUS_PX = 26;
+        const POPUP_HIDE_PADDING_PX = 8;
         const ALLOWED_DEATH_COUNTIES = new Set(['yuma', 'pima', 'santa cruz']);
+        var popupHiddenMarkers = [];
+        var popupSourceMarker = null;
 
         // If your AGOL layers are private, paste a valid token string here.
         // Leave empty for public services.
@@ -443,6 +447,115 @@
             return { station: nearest, meters: nearestMeters };
         }
 
+        function restorePopupHiddenMarkers() {
+            popupHiddenMarkers.forEach(item => {
+                if (!item || !item.marker || typeof item.marker.setStyle !== 'function') return;
+                item.marker.setStyle({
+                    opacity: item.opacity,
+                    fillOpacity: item.fillOpacity
+                });
+            });
+            popupHiddenMarkers = [];
+            popupSourceMarker = null;
+        }
+
+        function forEachCircleMarker(callback) {
+            const groups = [
+                waterStationsLayerGroup,
+                migrantLayerGroup,
+                deathsOutsideLayerGroup,
+                deathsInReservationLayerGroup,
+                summerDeathsLayerGroup,
+                restOfYearDeathsLayerGroup,
+                deaths10MilesFromWaterLayerGroup,
+                distanceMeasureLayerGroup
+            ];
+            const seen = new Set();
+
+            groups.forEach(group => {
+                group.eachLayer(layer => {
+                    if (!layer || typeof layer.getLatLng !== 'function' || typeof layer.setStyle !== 'function') return;
+                    const id = L.Util.stamp(layer);
+                    if (seen.has(id)) return;
+                    seen.add(id);
+                    callback(layer);
+                });
+            });
+        }
+
+        function hideMarkersNearPopup(sourceMarker, popup) {
+            restorePopupHiddenMarkers();
+
+            popupSourceMarker = sourceMarker || null;
+            const sourcePoint = (sourceMarker && typeof sourceMarker.getLatLng === 'function')
+                ? map.latLngToLayerPoint(sourceMarker.getLatLng())
+                : null;
+
+            let popupBounds = null;
+            if (popup && typeof popup.getElement === 'function') {
+                const popupElement = popup.getElement();
+                const mapElement = map.getContainer();
+
+                if (popupElement && mapElement) {
+                    const popupRect = popupElement.getBoundingClientRect();
+                    const mapRect = mapElement.getBoundingClientRect();
+
+                    popupBounds = {
+                        left: popupRect.left - mapRect.left - POPUP_HIDE_PADDING_PX,
+                        right: popupRect.right - mapRect.left + POPUP_HIDE_PADDING_PX,
+                        top: popupRect.top - mapRect.top - POPUP_HIDE_PADDING_PX,
+                        bottom: popupRect.bottom - mapRect.top + POPUP_HIDE_PADDING_PX
+                    };
+                }
+            }
+
+            if (!sourcePoint && !popupBounds) return;
+
+            forEachCircleMarker(marker => {
+                if (!map.hasLayer(marker)) return;
+
+                let shouldHide = false;
+                if (popupBounds) {
+                    const markerContainerPoint = map.latLngToContainerPoint(marker.getLatLng());
+                    shouldHide =
+                        markerContainerPoint.x >= popupBounds.left &&
+                        markerContainerPoint.x <= popupBounds.right &&
+                        markerContainerPoint.y >= popupBounds.top &&
+                        markerContainerPoint.y <= popupBounds.bottom;
+                } else {
+                    const markerPoint = map.latLngToLayerPoint(marker.getLatLng());
+                    shouldHide = sourcePoint.distanceTo(markerPoint) <= POPUP_HIDE_RADIUS_PX;
+                }
+
+                if (!shouldHide) return;
+
+                popupHiddenMarkers.push({
+                    marker,
+                    opacity: marker.options.opacity,
+                    fillOpacity: marker.options.fillOpacity
+                });
+
+                marker.setStyle({
+                    opacity: 0,
+                    fillOpacity: 0
+                });
+            });
+        }
+
+        function attachPopupNeighborHiding(marker) {
+            if (!marker || typeof marker.on !== 'function') return;
+
+            marker.on('popupopen', function (e) {
+                hideMarkersNearPopup(marker, e && e.popup ? e.popup : null);
+            });
+
+            marker.on('popupclose', function () {
+                if (popupSourceMarker === marker) {
+                    restorePopupHiddenMarkers();
+                }
+            });
+        }
+
         function refresh10MilesFromWaterLayer() {
             deaths10MilesFromWaterLayerGroup.clearLayers();
 
@@ -474,6 +587,7 @@
                     `Age: ${props.AGE || props.Age || props.age || 'N/A'}<br>` +
                     `Nearest water distance: ${miles.toFixed(2)} miles`
                 );
+                attachPopupNeighborHiding(marker);
                 marker.on('click', function () {
                     if (measurementEnabled) {
                         measureToNearestWater(marker.getLatLng());
@@ -609,7 +723,16 @@
                 `Closest station: ${result.station.name}<br>` +
                 `Mode: ${modeLabel}${usedRoute ? '' : ' (straight-line fallback)'}<br>` +
                 `Distance: ${miles.toFixed(2)} miles (${meters.toFixed(0)} m)`
-            ).openPopup();
+            );
+            line.on('popupopen', function (e) {
+                hideMarkersNearPopup(line, e && e.popup ? e.popup : null);
+            });
+            line.on('popupclose', function () {
+                if (popupSourceMarker === line) {
+                    restorePopupHiddenMarkers();
+                }
+            });
+            line.openPopup();
 
             const resultHtml =
                 `<strong>Nearest-water distance</strong><br>` +
@@ -901,6 +1024,7 @@
                         `<strong>${stationName}</strong><br>` +
                         `Type: ${stationType}`
                     );
+                    attachPopupNeighborHiding(stationMarker);
 
                     stationMarker.on('click', function (e) {
                         if (e && e.originalEvent) {
@@ -990,6 +1114,7 @@
                             `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
                             `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
                         );
+                        attachPopupNeighborHiding(marker);
                         marker.on('click', function () {
                             if (measurementEnabled) {
                                 measureToNearestWater(marker.getLatLng());
@@ -1010,6 +1135,7 @@
                                 `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
                                 `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
                             );
+                            attachPopupNeighborHiding(summerMarker);
                             summerMarker.on('click', function () {
                                 if (measurementEnabled) {
                                     measureToNearestWater(summerMarker.getLatLng());
@@ -1031,6 +1157,7 @@
                                 `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
                                 `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
                             );
+                            attachPopupNeighborHiding(restOfYearMarker);
                             restOfYearMarker.on('click', function () {
                                 if (measurementEnabled) {
                                     measureToNearestWater(restOfYearMarker.getLatLng());
@@ -1050,6 +1177,7 @@
                             `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
                             `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
                         );
+                        attachPopupNeighborHiding(marker);
                         marker.on('click', function () {
                             if (measurementEnabled) {
                                 measureToNearestWater(marker.getLatLng());
@@ -1144,6 +1272,7 @@
                         `Sex: ${props.SEX || props.Sex || props.sex || 'N/A'}<br>` +
                         `Age: ${props.AGE || props.Age || props.age || 'N/A'}`
                     );
+                    attachPopupNeighborHiding(marker);
                     marker.on('click', function () {
                         if (measurementEnabled) {
                             measureToNearestWater(marker.getLatLng());
@@ -1156,69 +1285,67 @@
 
         initAgolLayers();
 
-        // Zoom-to-active-data function
-        function zoomToActiveData() {
-            const bounds = L.latLngBounds([]);
+        function isFullscreenActive() {
+            return !!document.fullscreenElement;
+        }
 
-            if (map.hasLayer(waterStationsLayerGroup)) {
-                waterStationsLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
-            if (map.hasLayer(migrantLayerGroup)) {
-                migrantLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
-            if (map.hasLayer(deathsInReservationLayerGroup)) {
-                deathsInReservationLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
-            if (map.hasLayer(deaths10MilesFromWaterLayerGroup)) {
-                deaths10MilesFromWaterLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
-            if (map.hasLayer(summerDeathsLayerGroup)) {
-                summerDeathsLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
-            if (map.hasLayer(restOfYearDeathsLayerGroup)) {
-                restOfYearDeathsLayerGroup.eachLayer(layer => {
-                    if (layer.getLatLng) bounds.extend(layer.getLatLng());
-                });
-            }
-
-            if (bounds.isValid()) {
-                map.fitBounds(bounds, {padding: [20, 20]});
+        function updateFullscreenButton(link) {
+            if (!link) return;
+            if (isFullscreenActive()) {
+                link.title = 'Exit full screen map';
+                link.textContent = 'Exit Fullscreen';
             } else {
-                alert('No data visible to zoom to. Enable at least one overlay layer.');
+                link.title = 'Fill screen with map frame';
+                link.textContent = 'Fullscreen';
             }
         }
 
-        // Zoom control button
+        async function toggleMapFullscreen() {
+            try {
+                if (isFullscreenActive()) {
+                    await document.exitFullscreen();
+                } else {
+                    await document.documentElement.requestFullscreen();
+                }
+            } catch (_err) {
+                alert('Full screen is not available in this browser context.');
+            }
+        }
+
+        // Full-screen map control button
+        var fullscreenControlLink = null;
         var zoomControl = L.control({position: 'topleft'});
         zoomControl.onAdd = function () {
             var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-            var link = L.DomUtil.create('a', '', div);
-            link.title = 'Zoom to visible data';
-            link.href = '#';
-            link.innerHTML = '⤢';
+            var button = L.DomUtil.create('button', '', div);
+            button.type = 'button';
+            button.style.minWidth = '112px';
+            button.style.height = '30px';
+            button.style.border = '0';
+            button.style.background = '#fff';
+            button.style.cursor = 'pointer';
+            button.style.fontSize = '12px';
+            button.style.fontWeight = '600';
+            button.style.lineHeight = '1';
+            button.style.padding = '0 8px';
+            updateFullscreenButton(button);
+            fullscreenControlLink = button;
 
-            L.DomEvent.on(link, 'click', L.DomEvent.stopPropagation)
-                .on(link, 'click', L.DomEvent.preventDefault)
-                .on(link, 'click', zoomToActiveData);
+            L.DomEvent.on(button, 'mousedown', L.DomEvent.stopPropagation)
+                .on(button, 'dblclick', L.DomEvent.stopPropagation)
+                .on(button, 'click', L.DomEvent.stop)
+                .on(button, 'click', function () {
+                    toggleMapFullscreen();
+                });
 
             return div;
         };
         zoomControl.addTo(map);
+
+        document.addEventListener('fullscreenchange', function () {
+            updateFullscreenButton(fullscreenControlLink);
+            map.invalidateSize();
+        });
 
         // In-map measurement control so users can access the tool without scrolling.
         var measureControl = L.control({position: 'topright'});
