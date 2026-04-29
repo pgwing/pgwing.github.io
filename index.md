@@ -33,13 +33,12 @@
 
 		<section class="map-panel" id="map-section">
 			<iframe
-				class="map-embed"
-				src="arizona_project/project.html"
-				title="Southern Arizona water station map"
-				allow="fullscreen"
-				allowfullscreen
-				loading="eager">
-			</iframe>
+  class="map-embed"
+  src="{{ '/arizona_project/project.html' | relative_url }}"
+  title="Southern Arizona water station map"
+  allowfullscreen
+  loading="eager">
+</iframe>
 			<div class="map-caption">
 				<span class="map-badge">Leaflet-style UI</span>
 				<span>Map design and layers created using Leaflet and ArcGIS Online.</span>
