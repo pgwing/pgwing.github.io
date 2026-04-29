@@ -1,1 +1,503 @@
+/* ==========================================================================
+   Arizona Project style
+   ========================================================================== */
 
+		@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;700&display=swap');
+
+		:root {
+			--bg: #e7decd;
+			--surface: #fffaf0;
+			--ink: #2d2418;
+			--muted: #6a5a45;
+			--accent: #7d5a3c;
+			--line: #dacdb7;
+			--leaflet-ui: #f8f8f6;
+			--leaflet-border: #c5c8c0;
+			--leaflet-shadow: rgba(30, 38, 20, 0.18);
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: "Manrope", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+			background:
+				radial-gradient(circle at 12% 10%, rgba(252, 232, 181, 0.4), transparent 38%),
+				radial-gradient(circle at 88% 22%, rgba(163, 196, 171, 0.32), transparent 42%),
+				linear-gradient(180deg, #e8dfcf 0%, #e0d2b7 100%);
+			color: var(--ink);
+			line-height: 1.5;
+			min-height: 100vh;
+		}
+
+		header {
+			background: color-mix(in srgb, var(--surface) 90%, #f0e4ce 10%);
+			border-bottom: 1px solid color-mix(in srgb, var(--line) 84%, #bea780 16%);
+			padding: 1rem 1.25rem;
+			position: sticky;
+			top: 0;
+			z-index: 20;
+			backdrop-filter: blur(6px);
+		}
+
+		nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			max-width: 1200px;
+			margin: 0 auto;
+			gap: 1rem;
+		}
+
+		.site-title {
+			font-family: "Fraunces", Georgia, "Times New Roman", serif;
+			font-size: clamp(1.05rem, 2vw, 1.35rem);
+			font-weight: 700;
+			letter-spacing: 0.01em;
+		}
+
+		main {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 1.25rem;
+			display: grid;
+			gap: 1.25rem;
+		}
+
+		main > section,
+		main > div {
+			width: calc(100% + 2rem);
+			margin-left: -3.5rem;
+		}
+
+		.about-map-box {
+			padding: 1rem 1.25rem;
+			background: linear-gradient(120deg, #fff4de 0%, #fdebc8 100%);
+			border: 1px solid var(--line);
+			border-left: 6px solid #7d5a3c;
+			border-radius: 10px;
+			box-shadow: 0 8px 20px rgba(75, 49, 21, 0.08);
+		}
+
+		.about-map-box h2 {
+			margin: 0 0 0.4rem;
+		}
+
+		section {
+			background: var(--surface);
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			padding: 1rem;
+			box-shadow: 0 8px 20px rgba(56, 40, 15, 0.08);
+		}
+
+		h1, h2 {
+			font-family: "Fraunces", Georgia, "Times New Roman", serif;
+			margin-bottom: 0.5rem;
+		}
+
+		p {
+			color: var(--muted);
+		}
+
+		.hero {
+			display: grid;
+			gap: 0.75rem;
+		}
+
+		.map-panel {
+			padding: 0;
+			overflow: hidden;
+			border-radius: 14px;
+			border: 1px solid color-mix(in srgb, var(--line) 76%, #99866b 24%);
+			box-shadow: 0 16px 34px rgba(47, 31, 11, 0.2);
+		}
+
+		#map {
+			width: 100%;
+			height: 700px;
+			background: #ddd2bc;
+			border: 0;
+		}
+
+		.map-embed {
+			width: 100%;
+			height: 700px;
+			border: 0;
+			display: block;
+			background: #ddd2bc;
+		}
+
+		.map-caption {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.75rem;
+			padding: 0.72rem 0.9rem;
+			border-top: 1px solid var(--leaflet-border);
+			background: var(--leaflet-ui);
+			font-size: 0.88rem;
+			color: #374232;
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+		}
+
+		.map-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.35rem;
+			padding: 0.26rem 0.5rem;
+			border-radius: 3px;
+			border: 1px solid var(--leaflet-border);
+			background: #ffffff;
+			box-shadow: 0 1px 4px var(--leaflet-shadow);
+			font-weight: 700;
+			color: #2b3124;
+			text-transform: uppercase;
+			font-size: 0.72rem;
+			letter-spacing: 0.08em;
+		}
+
+		a {
+			color: #3d5f43;
+			text-decoration-thickness: 0.08em;
+			text-underline-offset: 0.18em;
+		}
+
+		a:hover {
+			color: #23382a;
+		}
+
+		.content-grid {
+			display: grid;
+			grid-template-columns: 2fr 1fr;
+			gap: 1rem;
+		}
+
+		.photo-grid {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 0.75rem;
+			margin-top: 0.5rem;
+		}
+
+		.photo-grid img {
+			width: 100%;
+			height: 180px;
+			object-fit: cover;
+			border-radius: 8px;
+			border: 1px solid var(--line);
+			background: #efe3cb;
+		}
+
+		.analysis-image {
+			width: 100%;
+			max-width: 200px;
+			height: auto;
+			margin-top: 0;
+			border-radius: 8px;
+			border: 1px solid var(--line);
+			display: block;
+		}
+
+		.analysis-image-row {
+			display: flex;
+			gap: 0.75rem;
+			margin-top: 0.8rem;
+			align-items: flex-start;
+			flex-wrap: wrap;
+		}
+
+		.analysis-image-stack {
+			display: flex;
+			flex-direction: column;
+			gap: 0.55rem;
+		}
+
+		.analysis-inline-note {
+			max-width: 200px;
+			color: var(--muted);
+			font-size: 0.92rem;
+			line-height: 1.4;
+		}
+
+		.video-wrap {
+			margin-top: 0.5rem;
+			position: relative;
+			width: 100%;
+			padding-top: 56.25%;
+			border-radius: 8px;
+			overflow: hidden;
+			border: 1px solid var(--line);
+			background: #e9dcc4;
+		}
+
+		.video-wrap iframe,
+		.video-wrap video {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			border: 0;
+		}
+
+		.dashboard-wrap {
+			margin-top: 0.6rem;
+			position: relative;
+			width: 100%;
+			height: 420px;
+			border-radius: 8px;
+			overflow: hidden;
+			border: 1px solid var(--line);
+			background: #efe3cb;
+		}
+
+		.dashboard-wrap iframe {
+			width: 100%;
+			height: 100%;
+			border: 0;
+		}
+
+		.quick-facts-grid {
+			display: grid;
+			gap: 0.75rem;
+			margin-top: 0.75rem;
+		}
+
+		.fact-card {
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 0.7rem;
+			background: #fff7eb;
+		}
+
+		.fact-label {
+			font-size: 0.88rem;
+			color: #5d4a34;
+		}
+
+		.fact-value {
+			font-size: 1.3rem;
+			font-weight: 700;
+			color: #2d2418;
+			margin-top: 0.15rem;
+		}
+
+		.chart-wrap {
+			height: 120px;
+			margin-top: 0.4rem;
+		}
+
+		.chart-wrap canvas {
+			width: 100% !important;
+			height: 100% !important;
+		}
+
+		.pie-chart-wrap {
+			margin-top: 0.9rem;
+			padding: 0.8rem;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: #fff7eb;
+		}
+
+		.pie-chart-title {
+			font-size: 0.88rem;
+			color: #5d4a34;
+			margin-bottom: 0.55rem;
+		}
+
+		.pie-chart-canvas-wrap {
+			position: relative;
+			height: 280px;
+		}
+
+		.weather-section {
+			display: grid;
+			gap: 0.9rem;
+		}
+
+		.weather-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 1rem;
+			flex-wrap: wrap;
+		}
+
+		.weather-actions {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			flex-wrap: wrap;
+		}
+
+		.weather-status {
+			font-size: 0.88rem;
+			color: #5d4a34;
+		}
+
+		.weather-status[data-state="error"] {
+			color: #8a3d22;
+		}
+
+		.weather-refresh {
+			border: 1px solid #8f7658;
+			border-radius: 999px;
+			padding: 0.45rem 0.9rem;
+			background: linear-gradient(180deg, #fff9ed 0%, #f1dfb6 100%);
+			color: #2d2418;
+			font: inherit;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.weather-refresh:hover {
+			background: linear-gradient(180deg, #fff3d9 0%, #ecd59c 100%);
+		}
+
+		.weather-refresh:disabled {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.weather-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			gap: 0.85rem;
+		}
+
+		.weather-card {
+			padding: 0.9rem;
+			border-radius: 10px;
+			border: 1px solid var(--line);
+			background:
+				radial-gradient(circle at top right, rgba(255, 220, 140, 0.35), transparent 38%),
+				linear-gradient(180deg, #fffaf0 0%, #f6ead1 100%);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+		}
+
+		.weather-card h3 {
+			font-family: "Fraunces", Georgia, "Times New Roman", serif;
+			font-size: 1.08rem;
+			margin-bottom: 0.25rem;
+		}
+
+		.weather-meta {
+			font-size: 0.85rem;
+			color: #6a5a45;
+			margin-bottom: 0.7rem;
+		}
+
+		.weather-temp {
+			font-size: 1.85rem;
+			font-weight: 700;
+			line-height: 1;
+			margin-bottom: 0.35rem;
+		}
+
+		.weather-summary {
+			font-size: 0.95rem;
+			font-weight: 700;
+			color: #3d5f43;
+			margin-bottom: 0.5rem;
+		}
+
+		.weather-stats {
+			display: grid;
+			gap: 0.35rem;
+			font-size: 0.9rem;
+			color: #4a3b28;
+		}
+
+		.weather-empty {
+			padding: 1rem;
+			border: 1px dashed #bea780;
+			border-radius: 8px;
+			background: #fff8ea;
+			color: #6a5a45;
+		}
+
+		.legend {
+			background: rgba(255, 250, 240, 0.96);
+			border: 1px solid #bda98b;
+			border-radius: 10px;
+			padding: 0.65rem 0.75rem;
+			box-shadow: 0 4px 14px rgba(33, 24, 11, 0.28);
+			color: #2d2418;
+			font-size: 0.88rem;
+			line-height: 1.25;
+			max-width: 260px;
+		}
+
+		.legend strong {
+			display: block;
+			margin-bottom: 0.35rem;
+			font-size: 0.93rem;
+		}
+
+		.legend-row {
+			display: flex;
+			align-items: center;
+			gap: 0.45rem;
+			margin: 0.2rem 0;
+		}
+
+		.legend-swatch {
+			display: inline-block;
+			flex: 0 0 auto;
+		}
+
+		footer {
+			max-width: 1200px;
+			margin: 0 auto 1.25rem;
+			padding: 0 1.25rem;
+			color: var(--muted);
+			font-size: 0.9rem;
+		}
+
+		@media (max-width: 900px) {
+			.content-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.weather-header {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.photo-grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			#map {
+				height: 620px;
+			}
+
+			.map-embed {
+				height: 620px;
+			}
+
+			.map-caption {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+		}
+
+		@media (max-width: 560px) {
+			.photo-grid {
+				grid-template-columns: 1fr;
+			}
+
+			#map {
+				height: 520px;
+			}
+
+			.map-embed {
+				height: 520px;
+			}
+		}
+	</style>
