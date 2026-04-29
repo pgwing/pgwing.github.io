@@ -34,7 +34,7 @@
 		<section class="map-panel" id="map-section">
 			<iframe
   class="map-embed"
-  src="{{ '/arizona_project/project.html' | relative_url }}"
+  src="{{ '/arizona_project/arizona_map.html' | relative_url }}"
   title="Southern Arizona water station map"
   allowfullscreen
   loading="eager">
